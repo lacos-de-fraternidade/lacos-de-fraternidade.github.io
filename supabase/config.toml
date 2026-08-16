@@ -1,0 +1,5 @@
+[functions.registrar-interesse]
+verify_jwt = false
+
+[functions.abrir-cartilha]
+verify_jwt = false

@@ -1,0 +1,5 @@
+.env
+.env.local
+supabase/.temp/
+supabase/.branches/
+assets/*.pdf

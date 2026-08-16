@@ -10,9 +10,8 @@
     <meta name="theme-color" content="#123a74" />
     <title>Laços de Fraternidade | Interesse em candidatura</title>
     <link rel="icon" href="assets/logo-classica.jpg" />
-    <link rel="stylesheet" href="styles.css" />
-    <script src="config.js" defer></script>
-    <script src="script.js" defer></script>
+    <link rel="stylesheet" href="styles.css?v=3" />
+    <script src="config.js?v=3"></script>
   </head>
   <body>
     <a class="skip-link" href="#conteudo">Ir para o conteúdo</a>
@@ -125,7 +124,15 @@
             </p>
           </div>
 
-          <form id="interest-form" class="interest-form" novalidate autocomplete="off">
+          <form
+            id="interest-form"
+            class="interest-form"
+            method="post"
+            action="#"
+            novalidate
+            autocomplete="off"
+            onsubmit="event.preventDefault();"
+          >
             <div class="field">
               <label for="nome">Nome completo</label>
               <input id="nome" name="nome" type="text" minlength="5" required autocomplete="off" placeholder="Digite seu nome" />
@@ -191,5 +198,6 @@
         </div>
       </div>
     </footer>
+    <script src="script.js?v=3"></script>
   </body>
 </html>

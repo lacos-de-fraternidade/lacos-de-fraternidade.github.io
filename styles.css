@@ -146,9 +146,11 @@ input:focus { border-color: var(--cyan); box-shadow: 0 0 0 4px rgba(8,174,229,.1
 .consent { display: flex; align-items: flex-start; gap: 10px; color: #3b4c61; font-size: .9rem; font-weight: 600; line-height: 1.45; }
 .consent input { width: auto; margin-top: 3px; accent-color: var(--blue-800); }
 .submit-button { width: 100%; margin-top: 10px; }
-.form-status { min-height: 26px; margin: 16px 0 0; padding: 0; text-align: center; font-size: .88rem; font-weight: 750; }
-.form-status.success { color: var(--success); }
-.form-status.error { color: var(--danger); }
+.form-layout .guide-section { padding-block: 0; }
+.form-layout .guide-card { grid-template-columns: 1fr; }
+.form-status { min-height: 26px; margin: 16px 0 0; padding: 10px 12px; border-radius: 10px; text-align: center; font-size: .88rem; font-weight: 750; }
+.form-status.success { color: var(--success); background: #e8f6ee; }
+.form-status.error { color: var(--danger); background: #fdecee; }
 
 .site-footer { padding-block: 32px; color: #cdd9eb; background: #06142d; }
 .footer-inner { display: flex; align-items: center; justify-content: space-between; gap: 30px; }

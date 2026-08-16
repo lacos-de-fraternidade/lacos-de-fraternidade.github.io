@@ -12,7 +12,6 @@ const fields = {
   cpf: cpfInput,
   email: document.querySelector("#email"),
   endereco: document.querySelector("#endereco"),
-  consentimento: document.querySelector("#consentimento"),
 };
 
 const config = window.APP_CONFIG ?? {};
@@ -50,7 +49,8 @@ function isValidCpf(value) {
 function showError(fieldName, message) {
   const field = fields[fieldName];
   const error = document.querySelector(`#${fieldName}-error`);
-  field.classList.toggle("is-invalid", field.type !== "checkbox");
+  if (!field) return;
+  field.classList.add("is-invalid");
   field.setAttribute("aria-invalid", "true");
   if (error) error.textContent = message;
 }
@@ -58,6 +58,7 @@ function showError(fieldName, message) {
 function clearError(fieldName) {
   const field = fields[fieldName];
   const error = document.querySelector(`#${fieldName}-error`);
+  if (!field) return;
   field.classList.remove("is-invalid");
   field.removeAttribute("aria-invalid");
   if (error) error.textContent = "";
@@ -92,11 +93,6 @@ function validateForm() {
     isValid = false;
   }
 
-  if (!fields.consentimento.checked) {
-    showError("consentimento", "Autorize o registro dos dados para continuar.");
-    isValid = false;
-  }
-
   return isValid;
 }
 
@@ -124,7 +120,7 @@ async function registrarInteresse() {
       cpf: fields.cpf.value,
       email: fields.email.value,
       endereco: fields.endereco.value,
-      consentimento: fields.consentimento.checked,
+      consentimento: true,
     }),
   });
 
@@ -168,11 +164,12 @@ async function obterCartilha() {
 }
 
 function revelarCartilha() {
+  form.hidden = true;
   cartilhaSection.hidden = false;
   cartilhaLer.disabled = false;
   cartilhaBaixar.disabled = false;
   cartilhaStatus.textContent = "";
-  cartilhaSection.scrollIntoView({ behavior: "smooth", block: "start" });
+  cartilhaSection.scrollIntoView({ behavior: "smooth", block: "center" });
   document.querySelector("#cartilha-titulo")?.focus({ preventScroll: true });
 }
 
@@ -187,6 +184,7 @@ cpfInput.addEventListener("input", () => {
 });
 
 Object.entries(fields).forEach(([name, field]) => {
+  if (!field) return;
   field.addEventListener("input", () => clearError(name));
   field.addEventListener("change", () => clearError(name));
 });

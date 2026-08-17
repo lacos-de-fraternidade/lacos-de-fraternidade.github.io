@@ -2,11 +2,11 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.8";
 import { hasValidPublishableKey, unauthorizedResponse } from "../_shared/auth.ts";
 import { jsonResponse, optionsResponse } from "../_shared/cors.ts";
 import { randomToken, sha256Hex } from "../_shared/crypto.ts";
-import { sendInteresseEmail } from "../_shared/email.ts";
+import { sendCandidatoEmail, sendSecretarioEmail } from "../_shared/email.ts";
 import { normalizeInteresse } from "../_shared/validation.ts";
 
 const TOKEN_TTL_MINUTES = 10;
-const MAX_SUBMISSIONS_PER_DAY = 5;
+const MAX_SUBMISSIONS_PER_DAY = 3;
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return optionsResponse(req);
@@ -17,7 +17,6 @@ Deno.serve(async (req) => {
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-
   if (!supabaseUrl || !serviceRoleKey) {
     return jsonResponse(req, 500, { ok: false, error: "Serviço temporariamente indisponível." });
   }
@@ -29,30 +28,51 @@ Deno.serve(async (req) => {
     return jsonResponse(req, 400, { ok: false, error: "Não foi possível ler os dados enviados." });
   }
 
-  const { errors, data } = normalizeInteresse(payload);
-  if (errors.length > 0) {
-    return jsonResponse(req, 422, { ok: false, error: errors[0], errors });
+  const normalized = normalizeInteresse(payload);
+  if (normalized.spam) {
+    return jsonResponse(req, 200, { ok: true });
+  }
+  if (normalized.errors.length > 0 || !normalized.data) {
+    return jsonResponse(req, 422, { ok: false, error: normalized.errors[0], errors: normalized.errors });
   }
 
+  const data = normalized.data;
   const supabase = createClient(supabaseUrl, serviceRoleKey, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
-  const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-  const { count, error: countError } = await supabase
-    .from("interesse")
-    .select("id", { count: "exact", head: true })
-    .eq("email", data.email)
-    .gte("created_at", since);
-
-  if (countError) {
-    return jsonResponse(req, 500, { ok: false, error: "Não foi possível registrar o interesse." });
+  const [{ data: byEmail }, { data: byCpf }] = await Promise.all([
+    supabase.from("interesse").select("id").eq("email", data.email).limit(1),
+    supabase.from("interesse").select("id").eq("cpf", data.cpf).limit(1),
+  ]);
+  if ((byEmail && byEmail.length > 0) || (byCpf && byCpf.length > 0)) {
+    return jsonResponse(req, 409, {
+      ok: false,
+      error: "Já existe uma manifestação registrada com estes dados. Se precisar de orientação, fale com a Secretaria.",
+    });
   }
 
-  if ((count ?? 0) >= MAX_SUBMISSIONS_PER_DAY) {
+  const sinceDay = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const sinceWindow = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+  const [{ count, error: countError }, { count: recentCount, error: recentError }] = await Promise.all([
+    supabase
+      .from("interesse")
+      .select("id", { count: "exact", head: true })
+      .eq("email", data.email)
+      .gte("created_at", sinceDay),
+    supabase
+      .from("interesse")
+      .select("id", { count: "exact", head: true })
+      .gte("created_at", sinceWindow),
+  ]);
+
+  if (countError || recentError) {
+    return jsonResponse(req, 500, { ok: false, error: "Não foi possível registrar o interesse." });
+  }
+  if ((count ?? 0) >= MAX_SUBMISSIONS_PER_DAY || (recentCount ?? 0) >= 8) {
     return jsonResponse(req, 429, {
       ok: false,
-      error: "Há registros recentes com este e-mail. Tente novamente mais tarde.",
+      error: "Há registros recentes com estes dados. Tente novamente mais tarde.",
     });
   }
 
@@ -63,36 +83,41 @@ Deno.serve(async (req) => {
     .single();
 
   if (insertError || !interesse) {
+    if (insertError?.code === "23505") {
+      return jsonResponse(req, 409, {
+        ok: false,
+        error: "Já existe uma manifestação registrada com estes dados. Se precisar de orientação, fale com a Secretaria.",
+      });
+    }
+    console.error("insert interesse", insertError?.code || "erro");
     return jsonResponse(req, 500, { ok: false, error: "Não foi possível salvar o registro." });
   }
 
   const token = randomToken();
-  const expiresAt = new Date(Date.now() + TOKEN_TTL_MINUTES * 60 * 1000).toISOString();
-
-  const { error: tokenError } = await supabase.from("cartilha_token").insert({
+  await supabase.from("cartilha_token").insert({
     interesse_id: interesse.id,
     token_hash: await sha256Hex(token),
-    expires_at: expiresAt,
+    expires_at: new Date(Date.now() + TOKEN_TTL_MINUTES * 60 * 1000).toISOString(),
   });
 
-  if (tokenError) {
-    return jsonResponse(req, 500, { ok: false, error: "O registro foi salvo, mas a cartilha não pôde ser liberada." });
+  try {
+    await sendSecretarioEmail(data);
+  } catch (error) {
+    console.error("Falha no e-mail do secretário", error);
   }
 
+  let candidatoNotificado = false;
   try {
-    await sendInteresseEmail(data);
+    await sendCandidatoEmail(data);
+    candidatoNotificado = true;
   } catch (error) {
-    console.error("Falha ao enviar e-mail de interesse", error);
-    return jsonResponse(req, 500, {
-      ok: false,
-      error: "O registro foi salvo, mas o e-mail de notificação não pôde ser enviado.",
-    });
+    console.error("Falha no e-mail do candidato", error);
   }
 
   return jsonResponse(req, 200, {
     ok: true,
-    token,
-    expiresAt,
+    id: interesse.id,
+    candidatoNotificado,
     expiresInMinutes: TOKEN_TTL_MINUTES,
   });
 });

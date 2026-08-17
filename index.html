@@ -5,26 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta
       name="description"
-      content="Informações iniciais e manifestação de interesse na Loja Maçônica Laços de Fraternidade 357 nº 251."
+      content="ARLS Laços de Fraternidade 357 nº 251, Oriente de Duque de Caxias, GLMERJ. Conheça o processo de manifestação de interesse."
     />
     <meta name="theme-color" content="#123a74" />
-    <title>Laços de Fraternidade | Interesse em candidatura</title>
+    <title>Laços de Fraternidade | ARLS 357 nº 251</title>
     <link rel="icon" href="assets/logo-classica.jpg" />
-    <link rel="stylesheet" href="styles.css?v=3" />
-    <script src="config.js?v=3"></script>
+    <link rel="stylesheet" href="styles.css?v=5" />
   </head>
   <body>
     <a class="skip-link" href="#conteudo">Ir para o conteúdo</a>
-
     <header class="site-header">
       <div class="container header-inner">
-        <a class="brand" href="#inicio" aria-label="Laços de Fraternidade - início">
-          <img
-            src="assets/logo-classica.jpg"
-            alt="Emblema da Loja Maçônica Laços de Fraternidade 357 nº 251"
-            width="72"
-            height="72"
-          />
+        <a class="brand" href="index.html" aria-label="Laços de Fraternidade - início">
+          <img src="assets/logo-classica.jpg" alt="Emblema da Loja Maçônica Laços de Fraternidade 357 nº 251" width="72" height="72" />
           <div class="footer-brand">
             <p>
               <strong>Laços de Fraternidade 357 nº 251</strong><br />
@@ -32,7 +25,7 @@
             </p>
           </div>
         </a>
-        <a class="header-link" href="#interesse">Manifestar interesse</a>
+        <a class="header-link" href="interesse.html">Manifestar interesse</a>
       </div>
     </header>
 
@@ -46,11 +39,12 @@
             <p class="eyebrow">Um primeiro contato, com clareza e discrição</p>
             <h1>Conheça antes de decidir.</h1>
             <p class="hero-text">
-              Esta página reúne informações iniciais para quem deseja compreender o
-              compromisso envolvido em uma possível candidatura e refletir com tranquilidade.
+              A ARLS Laços de Fraternidade 357 nº 251, Oriente de Duque de Caxias, subordinada à
+              GLMERJ, reúne informações iniciais para quem deseja compreender o compromisso
+              envolvido em uma possível candidatura e refletir com tranquilidade.
             </p>
             <div class="hero-actions">
-              <a class="button button-primary" href="#interesse">Manifestar interesse</a>
+              <a class="button button-primary" href="interesse.html">Manifestar Interesse</a>
               <a class="button button-secondary" href="#processo">Entender o processo</a>
             </div>
             <p class="hero-note">Manifestar interesse não representa candidatura formal nem garante admissão.</p>
@@ -91,101 +85,9 @@
               </div>
             </li>
           </ol>
-        </div>
-      </section>
-
-      <section class="section form-section" id="interesse" aria-labelledby="interesse-titulo">
-        <div class="container form-layout">
-          <div class="form-heading">
-            <p class="eyebrow">Formulário de interesse</p>
-          
-            <h2 id="interesse-titulo">Manifestação de interesse</h2>
-          
-            <p>
-              <strong>Toda grande jornada começa com um primeiro passo.</strong>
-            </p>
-          
-            <p>
-              Se você acredita nos valores da fraternidade, da retidão e do aperfeiçoamento
-              pessoal, preencha o formulário ao lado para registrar sua manifestação de
-              interesse.
-            </p>
-          
-            <p>
-              Após o envio, você terá acesso à <strong>Cartilha de Orientação ao
-              Candidato</strong>, que reúne informações importantes sobre a Maçonaria e
-              sobre o processo de ingresso.
-            </p>
-          
-            <p>
-              Em seguida, seus dados serão analisados pela
-              <strong>Comissão de Sindicância da ARLS Laços de Fraternidade</strong>, que
-              entrará em contato para orientar as próximas etapas do processo.
-            </p>
+          <div class="hero-actions" style="margin-top: 42px;">
+            <a class="button button-primary" href="interesse.html">Manifestar Interesse</a>
           </div>
-
-          <form
-            id="interest-form"
-            class="interest-form"
-            method="post"
-            action="#"
-            novalidate
-            autocomplete="off"
-            onsubmit="event.preventDefault();"
-          >
-            <div class="field">
-              <label for="nome">Nome completo</label>
-              <input id="nome" name="nome" type="text" minlength="5" required autocomplete="off" placeholder="Digite seu nome" />
-              <small class="field-error" id="nome-error"></small>
-            </div>
-
-            <div class="field-row">
-              <div class="field">
-                <label for="cpf">CPF</label>
-                <input id="cpf" name="cpf" type="text" inputmode="numeric" maxlength="14" required autocomplete="off" placeholder="000.000.000-00" aria-describedby="cpf-error" />
-                <small class="field-error" id="cpf-error"></small>
-              </div>
-              <div class="field">
-                <label for="email">E-mail</label>
-                <input id="email" name="email" type="email" required autocomplete="off" placeholder="nome@exemplo.com" />
-                <small class="field-error" id="email-error"></small>
-              </div>
-            </div>
-
-            <div class="field">
-              <label for="endereco">Endereço</label>
-              <input id="endereco" name="endereco" type="text" minlength="8" required autocomplete="off" placeholder="Informe seu endereço completo" />
-              <small class="field-error" id="endereco-error"></small>
-            </div>
-
-
-            <button class="button button-primary submit-button" id="submit-button" type="submit">
-              Registrar interesse
-            </button>
-            <p class="form-status" id="form-status" role="status" aria-live="polite"></p>
-          </form>
-
-          <section class="guide-section" id="cartilha" aria-labelledby="cartilha-titulo" hidden>
-            <div class="guide-card">
-              <div>
-                <p class="eyebrow">Acesso liberado</p>
-                <h2 id="cartilha-titulo" tabindex="-1">Cartilha de orientação ao candidato</h2>
-                <p>
-                  O registro foi confirmado. Este acesso é exclusivo, vale por 10 minutos e se
-                  encerra no primeiro uso.
-                </p>
-              </div>
-              <div class="guide-actions">
-                <button class="button button-light" id="cartilha-ler" type="button" disabled>
-                  Ler no navegador
-                </button>
-                <button class="text-link" id="cartilha-baixar" type="button" disabled>
-                  Baixar PDF <span aria-hidden="true">↓</span>
-                </button>
-                <p class="cartilha-status" id="cartilha-status" role="status" aria-live="polite"></p>
-              </div>
-            </div>
-          </section>
         </div>
       </section>
     </main>
@@ -196,8 +98,8 @@
           <img src="assets/logo-classica.jpg" alt="" width="44" height="44" />
           <p><strong>Laços de Fraternidade 357 nº 251</strong><br /><span>Oriente de Duque de Caxias · GLMERJ</span></p>
         </div>
+        <p class="footer-note"><a href="privacidade.html">Política de privacidade</a></p>
       </div>
     </footer>
-    <script src="script.js?v=3"></script>
   </body>
 </html>

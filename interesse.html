@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="Formulário de manifestação de interesse na ARLS Laços de Fraternidade 357 nº 251." />
+    <meta name="theme-color" content="#123a74" />
+    <title>Manifestar interesse | Laços de Fraternidade</title>
+    <link rel="icon" href="assets/logo-classica.jpg" />
+    <link rel="stylesheet" href="styles.css?v=5" />
+    <script src="config.js?v=5"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#conteudo">Ir para o conteúdo</a>
+    <header class="site-header">
+      <div class="container header-inner">
+        <a class="brand" href="index.html" aria-label="Laços de Fraternidade - início">
+          <img src="assets/logo-classica.jpg" alt="Emblema da Loja Maçônica Laços de Fraternidade 357 nº 251" width="72" height="72" />
+          <div class="footer-brand">
+            <p>
+              <strong>Laços de Fraternidade 357 nº 251</strong><br />
+              <small>Oriente de Duque de Caxias · GLMERJ</small>
+            </p>
+          </div>
+        </a>
+        <a class="header-link" href="index.html">Página inicial</a>
+      </div>
+    </header>
+
+    <main id="conteudo" class="page-form">
+      <section class="section form-section">
+        <div class="container form-page">
+          <div class="form-heading">
+            <p class="eyebrow">Secretaria</p>
+            <h1>Manifestação de interesse</h1>
+            <p>
+              Preencha as seções abaixo com atenção. Campos marcados com * são obrigatórios.
+              Após o envio confirmado, você será direcionado a uma página de confirmação.
+            </p>
+          </div>
+
+          <form id="interest-form" class="interest-form" method="post" action="#" novalidate autocomplete="on" onsubmit="event.preventDefault();">
+            <div class="hp" aria-hidden="true">
+              <label for="website">Website</label>
+              <input id="website" name="website" tabindex="-1" autocomplete="off" />
+            </div>
+
+            <fieldset class="form-block">
+              <legend>1. Dados pessoais</legend>
+              <div class="field">
+                <label for="nome">Nome completo *</label>
+                  <input id="nome" name="nome" type="text" maxlength="120" required autocomplete="name" placeholder="Nome e sobrenome" aria-describedby="nome-error" />
+                <small class="field-error" id="nome-error"></small>
+              </div>
+              <div class="field-row">
+                <div class="field">
+                  <label for="dataNascimento">Data de nascimento *</label>
+                  <input id="dataNascimento" name="dataNascimento" type="date" required autocomplete="bday" aria-describedby="dataNascimento-hint dataNascimento-error" />
+                  <small class="field-hint" id="dataNascimento-hint">Idade mínima de 21 anos.</small>
+                  <small class="field-error" id="dataNascimento-error"></small>
+                </div>
+                <div class="field">
+                  <label for="cpf">CPF *</label>
+                  <input id="cpf" name="cpf" type="text" inputmode="numeric" maxlength="14" required autocomplete="off" placeholder="000.000.000-00" aria-describedby="cpf-error" />
+                  <small class="field-error" id="cpf-error"></small>
+                </div>
+              </div>
+              <div class="field">
+                <label for="estadoCivil">Estado civil *</label>
+                <select id="estadoCivil" name="estadoCivil" required>
+                  <option value="">Selecione</option>
+                  <option value="solteiro">Solteiro</option>
+                  <option value="casado">Casado</option>
+                  <option value="divorciado">Divorciado</option>
+                  <option value="viuvo">Viúvo</option>
+                  <option value="uniao_estavel">União estável</option>
+                  <option value="outro">Outro</option>
+                </select>
+                <small class="field-error" id="estadoCivil-error"></small>
+              </div>
+
+              <div id="bloco-conjuge" class="conditional" hidden>
+                <div class="field">
+                  <label for="esposaNome">Nome completo da esposa ou companheira *</label>
+                  <input id="esposaNome" name="esposaNome" type="text" maxlength="120" autocomplete="off" />
+                  <small class="field-error" id="esposaNome-error"></small>
+                </div>
+                <div class="field">
+                  <label for="esposaWhatsapp">WhatsApp da esposa ou companheira *</label>
+                  <input id="esposaWhatsapp" name="esposaWhatsapp" type="tel" inputmode="numeric" maxlength="16" autocomplete="off" placeholder="(00) 00000-0000" />
+                  <small class="field-error" id="esposaWhatsapp-error"></small>
+                </div>
+                <div class="field consent-field">
+                  <label class="consent" for="consentimentoEsposa">
+                    <input id="consentimentoEsposa" name="consentimentoEsposa" type="checkbox" />
+                    <span>Estou ciente de que o consentimento da esposa ou companheira será necessário para o prosseguimento do processo.</span>
+                  </label>
+                  <small class="field-error" id="consentimentoEsposa-error"></small>
+                </div>
+              </div>
+
+              <div id="bloco-mae" class="conditional" hidden>
+                <div class="field">
+                  <label for="maeNome">Nome completo da mãe *</label>
+                  <input id="maeNome" name="maeNome" type="text" maxlength="120" autocomplete="off" />
+                  <small class="field-error" id="maeNome-error"></small>
+                </div>
+                <div class="field">
+                  <label for="maeWhatsapp">WhatsApp da mãe *</label>
+                  <input id="maeWhatsapp" name="maeWhatsapp" type="tel" inputmode="numeric" maxlength="16" autocomplete="off" placeholder="(00) 00000-0000" />
+                  <small class="field-error" id="maeWhatsapp-error"></small>
+                </div>
+                <div class="field consent-field">
+                  <label class="consent" for="consentimentoMae">
+                    <input id="consentimentoMae" name="consentimentoMae" type="checkbox" />
+                    <span>Estou ciente de que o consentimento da mãe será necessário para o prosseguimento do processo.</span>
+                  </label>
+                  <small class="field-error" id="consentimentoMae-error"></small>
+                </div>
+              </div>
+
+              <div id="bloco-outro" class="conditional" hidden>
+                <div class="field">
+                  <label for="situacaoFamiliar">Situação familiar *</label>
+                  <textarea id="situacaoFamiliar" name="situacaoFamiliar" rows="3" maxlength="400" placeholder="Descreva brevemente sua situação familiar."></textarea>
+                  <small class="field-error" id="situacaoFamiliar-error"></small>
+                </div>
+              </div>
+            </fieldset>
+
+            <fieldset class="form-block">
+              <legend>2. Dados de contato</legend>
+              <div class="field">
+                <label for="whatsapp">WhatsApp *</label>
+                <input id="whatsapp" name="whatsapp" type="tel" inputmode="numeric" maxlength="16" required autocomplete="tel" placeholder="(00) 00000-0000" aria-describedby="whatsapp-hint whatsapp-error" />
+                <small class="field-hint" id="whatsapp-hint">Informe um número de WhatsApp com DDD. Esse será o principal canal utilizado para o contato sobre as próximas etapas.</small>
+                <small class="field-error" id="whatsapp-error"></small>
+              </div>
+              <div class="field-row">
+                <div class="field">
+                  <label for="email">E-mail *</label>
+                  <input id="email" name="email" type="email" required autocomplete="email" placeholder="nome@exemplo.com" aria-describedby="email-error" />
+                  <small class="field-error" id="email-error"></small>
+                </div>
+                <div class="field">
+                  <label for="emailConfirmacao">Confirme o e-mail *</label>
+                  <input id="emailConfirmacao" name="emailConfirmacao" type="email" required autocomplete="email" placeholder="Repita o e-mail" aria-describedby="emailConfirmacao-error" />
+                  <small class="field-error" id="emailConfirmacao-error"></small>
+                </div>
+              </div>
+            </fieldset>
+
+            <fieldset class="form-block">
+              <legend>3. Endereço</legend>
+              <div class="field-row">
+                <div class="field">
+                  <label for="cep">CEP *</label>
+                  <input id="cep" name="cep" type="text" inputmode="numeric" maxlength="9" required autocomplete="postal-code" placeholder="00000-000" aria-describedby="cep-hint cep-error" />
+                  <small class="field-hint" id="cep-hint">Ao informar o CEP, o endereço será preenchido automaticamente quando possível.</small>
+                  <small class="field-error" id="cep-error"></small>
+                </div>
+                <div class="field">
+                  <label for="estado">Estado *</label>
+                  <select id="estado" name="estado" required autocomplete="address-level1">
+                    <option value="">UF</option>
+                  </select>
+                  <small class="field-error" id="estado-error"></small>
+                </div>
+              </div>
+              <div class="field">
+                <label for="logradouro">Logradouro *</label>
+                <input id="logradouro" name="logradouro" type="text" required autocomplete="address-line1" />
+                <small class="field-error" id="logradouro-error"></small>
+              </div>
+              <div class="field-row">
+                <div class="field">
+                  <label for="numero">Número *</label>
+                  <input id="numero" name="numero" type="text" required autocomplete="off" placeholder="Nº ou S/N" />
+                  <small class="field-error" id="numero-error"></small>
+                </div>
+                <div class="field">
+                  <label for="complemento">Complemento</label>
+                  <input id="complemento" name="complemento" type="text" autocomplete="address-line2" placeholder="Apto, bloco, casa..." />
+                  <small class="field-error" id="complemento-error"></small>
+                </div>
+              </div>
+              <div class="field-row">
+                <div class="field">
+                  <label for="bairro">Bairro *</label>
+                  <input id="bairro" name="bairro" type="text" required autocomplete="address-level3" />
+                  <small class="field-error" id="bairro-error"></small>
+                </div>
+                <div class="field">
+                  <label for="cidade">Cidade *</label>
+                  <input id="cidade" name="cidade" type="text" required autocomplete="address-level2" />
+                  <small class="field-error" id="cidade-error"></small>
+                </div>
+              </div>
+            </fieldset>
+
+            <fieldset class="form-block">
+              <legend>4. Motivação</legend>
+              <div class="field">
+                <label for="motivacao">Por que deseja ingressar na Maçonaria? *</label>
+                <textarea id="motivacao" name="motivacao" rows="7" required maxlength="2000" aria-describedby="motivacao-count motivacao-error"></textarea>
+                <div class="char-count" id="motivacao-count">0 / 2000</div>
+                <small class="field-error" id="motivacao-error"></small>
+              </div>
+            </fieldset>
+
+            <fieldset class="form-block">
+              <legend>5. Consentimento e LGPD</legend>
+              <p class="field-hint">
+                Os dados serão utilizados exclusivamente para análise desta manifestação e condução
+                das etapas institucionais. Correção ou exclusão podem ser solicitadas pelo e-mail
+                <a href="mailto:lacos.de.fraternidade.357.251@gmail.com">lacos.de.fraternidade.357.251@gmail.com</a>.
+                Consulte a <a href="privacidade.html">política de privacidade</a>.
+              </p>
+              <div class="field consent-field">
+                <label class="consent" for="lgpdAceite">
+                  <input id="lgpdAceite" name="lgpdAceite" type="checkbox" required />
+                  <span>Autorizo o tratamento dos meus dados pessoais para fins de análise da minha manifestação de interesse e condução das etapas institucionais relacionadas, nos termos da Lei Geral de Proteção de Dados Pessoais — LGPD. *</span>
+                </label>
+                <small class="field-error" id="lgpdAceite-error"></small>
+              </div>
+            </fieldset>
+
+            <button class="button button-primary submit-button" id="submit-button" type="submit">Enviar manifestação</button>
+            <p class="form-status" id="form-status" role="status" aria-live="polite"></p>
+          </form>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container footer-inner">
+        <div class="footer-brand">
+          <img src="assets/logo-classica.jpg" alt="" width="44" height="44" />
+          <p><strong>Laços de Fraternidade 357 nº 251</strong><br /><span>Oriente de Duque de Caxias · GLMERJ</span></p>
+        </div>
+        <p class="footer-note"><a href="privacidade.html">Política de privacidade</a></p>
+      </div>
+    </footer>
+    <script src="script.js?v=5"></script>
+  </body>
+</html>

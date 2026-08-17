@@ -8,7 +8,7 @@
   const motivacaoMax = Number(config.motivacaoMax || 2000);
   const statusMessage = document.querySelector("#form-status");
   const submitButton = document.querySelector("#submit-button");
-  const defaultSubmitLabel = (submitButton && submitButton.textContent) || "Enviar manifestação";
+  const defaultSubmitLabel = (submitButton && submitButton.textContent) || "Enviar cadastro";
   const ufs = ["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"];
 
   const el = function (id) {
@@ -195,7 +195,7 @@
     if (!birth) mark("dataNascimento", "Informe sua data de nascimento.");
     else if (new Date(birth + "T00:00:00") > new Date()) mark("dataNascimento", "Informe uma data de nascimento válida.");
     else if (idadeEmAnos(birth) < idadeMinima) {
-      mark("dataNascimento", "Para manifestar interesse é necessário possuir, no mínimo, " + idadeMinima + " anos de idade.");
+      mark("dataNascimento", "Para o Cadastro do candidato é necessário possuir, no mínimo, " + idadeMinima + " anos de idade.");
     }
     if (!isValidCpf(el("cpf").value)) mark("cpf", "Informe um CPF válido.");
     if (!estadoCivil()) mark("estadoCivil", "Selecione o estado civil.");
@@ -295,7 +295,7 @@
   el("motivacao").maxLength = motivacaoMax;
   const hintText = el("dataNascimento-hint-text") || el("dataNascimento-hint");
   if (hintText) {
-    hintText.textContent = "Para esta manifestação, a idade mínima é de " + idadeMinima + " anos.";
+    hintText.textContent = "Para o Cadastro do candidato, a idade mínima é de " + idadeMinima + " anos.";
   }
   syncConditional();
   updateCount();
@@ -417,7 +417,7 @@
         return {};
       });
       if (!response.ok || !result.ok) {
-        throw new Error(result.error || "Não foi possível registrar o interesse.");
+        throw new Error(result.error || "Não foi possível enviar o cadastro.");
       }
       sessionStorage.setItem(
         "lacosManifestacao",
@@ -431,7 +431,7 @@
       );
       window.location.href = "confirmacao.html";
     } catch (error) {
-      setStatus(error.message || "Não foi possível registrar o interesse.", "error");
+      setStatus(error.message || "Não foi possível enviar o cadastro.", "error");
       submitting = false;
       form.removeAttribute("aria-busy");
       submitButton.disabled = false;

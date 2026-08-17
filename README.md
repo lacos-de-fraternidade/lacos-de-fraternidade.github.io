@@ -1,6 +1,6 @@
 # Laços de Fraternidade
 
-Site institucional estático no GitHub Pages, com formulário de manifestação de interesse processado pelo Supabase.
+Site institucional estático no GitHub Pages, com o Cadastro do candidato processado pelo Supabase.
 
 Fluxo: `index.html` → `interesse.html` → backend → `confirmacao.html`.
 

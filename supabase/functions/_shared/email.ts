@@ -133,9 +133,12 @@ async function sendEmail(options: {
   text: string;
   html: string;
   replyTo?: string;
-}) {
+}): Promise<{ sent: boolean; status: number; id: string | null }> {
   const apiKey = Deno.env.get("RESEND_API_KEY");
-  if (!apiKey) throw new Error("RESEND_API_KEY ausente");
+  if (!apiKey) {
+    console.error("Falha no envio de e-mail", { status: 0, name: "RESEND_API_KEY ausente" });
+    return { sent: false, status: 0, id: null };
+  }
 
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -153,9 +156,23 @@ async function sendEmail(options: {
     }),
   });
 
-  if (!response.ok) {
-    throw new Error(await response.text());
+  const raw = await response.text();
+  let parsed: { id?: string; message?: string; name?: string } = {};
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    parsed = {};
   }
+
+  if (!response.ok) {
+    console.error("Falha no envio de e-mail", {
+      status: response.status,
+      name: parsed.name || "erro",
+    });
+    return { sent: false, status: response.status, id: null };
+  }
+
+  return { sent: true, status: response.status, id: parsed.id || null };
 }
 
 export async function sendSecretarioEmail(data: InteresseRegistro) {
@@ -210,7 +227,7 @@ export async function sendSecretarioEmail(data: InteresseRegistro) {
     data.motivacao,
   ].join("\n");
 
-  await sendEmail({
+  return sendEmail({
     to: NOTIFY_EMAIL,
     subject: `Nova manifestação de interesse — ${data.nome}`,
     text,
@@ -219,33 +236,4 @@ export async function sendSecretarioEmail(data: InteresseRegistro) {
   });
 }
 
-export async function sendCandidatoEmail(data: InteresseRegistro) {
-  const primeiroNome = data.nome.split(" ")[0];
-  const inner = `
-    <p style="margin:0 0 16px;">Prezado ${escapeHtml(data.nome)},</p>
-    <p style="margin:0 0 16px;">Recebemos sua manifestação de interesse com sucesso.</p>
-    <p style="margin:0 0 16px;">As informações fornecidas serão analisadas pela Comissão de Sindicância da ARLS Laços de Fraternidade. Após essa análise, entraremos em contato pelo WhatsApp ou e-mail informado para orientar você sobre as próximas etapas.</p>
-    <p style="margin:0 0 24px;">Este e-mail confirma apenas o recebimento da manifestação e não representa aprovação ou ingresso na instituição.</p>
-    <p style="margin:0 0 8px;color:#5f6d80;font-size:14px;">Canal institucional: ${NOTIFY_EMAIL}</p>
-    <p style="margin:0;"><a href="${SITE_URL}" style="display:inline-block;background:#123a74;color:#ffffff;text-decoration:none;padding:12px 20px;border-radius:999px;font-weight:700;">Voltar ao site</a></p>
-  `;
-  const text = [
-    `Prezado ${data.nome},`,
-    "",
-    "Recebemos sua manifestação de interesse com sucesso.",
-    "",
-    "As informações fornecidas serão analisadas pela Comissão de Sindicância da ARLS Laços de Fraternidade. Após essa análise, entraremos em contato pelo WhatsApp ou e-mail informado para orientar você sobre as próximas etapas.",
-    "",
-    "Este e-mail confirma apenas o recebimento da manifestação e não representa aprovação ou ingresso na instituição.",
-    "",
-    `Canal institucional: ${NOTIFY_EMAIL}`,
-  ].join("\n");
 
-  await sendEmail({
-    to: data.email,
-    subject: `${primeiroNome}, recebemos sua manifestação de interesse`,
-    text,
-    html: layout("Manifestação recebida", inner),
-    replyTo: NOTIFY_EMAIL,
-  });
-}

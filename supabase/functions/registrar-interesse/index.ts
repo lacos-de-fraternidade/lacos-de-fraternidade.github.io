@@ -2,7 +2,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.8";
 import { hasValidPublishableKey, unauthorizedResponse } from "../_shared/auth.ts";
 import { jsonResponse, optionsResponse } from "../_shared/cors.ts";
 import { randomToken, sha256Hex } from "../_shared/crypto.ts";
-import { sendCandidatoEmail, sendSecretarioEmail } from "../_shared/email.ts";
+import { sendSecretarioEmail } from "../_shared/email.ts";
 import { normalizeInteresse } from "../_shared/validation.ts";
 
 const TOKEN_TTL_MINUTES = 10;
@@ -94,30 +94,29 @@ Deno.serve(async (req) => {
   }
 
   const token = randomToken();
-  await supabase.from("cartilha_token").insert({
+  const { error: tokenError } = await supabase.from("cartilha_token").insert({
     interesse_id: interesse.id,
     token_hash: await sha256Hex(token),
     expires_at: new Date(Date.now() + TOKEN_TTL_MINUTES * 60 * 1000).toISOString(),
   });
-
-  try {
-    await sendSecretarioEmail(data);
-  } catch (error) {
-    console.error("Falha no e-mail do secretário", error);
+  const cartilhaToken = tokenError ? null : token;
+  if (tokenError) {
+    console.error("cartilha_token", tokenError.code || "erro");
   }
 
-  let candidatoNotificado = false;
+  let secretaryEmailSent = false;
   try {
-    await sendCandidatoEmail(data);
-    candidatoNotificado = true;
+    const secretary = await sendSecretarioEmail(data);
+    secretaryEmailSent = Boolean(secretary.sent);
   } catch (error) {
-    console.error("Falha no e-mail do candidato", error);
+    console.error("Falha no e-mail do secretário", { name: error instanceof Error ? error.name : "erro" });
   }
 
   return jsonResponse(req, 200, {
     ok: true,
-    id: interesse.id,
-    candidatoNotificado,
+    registrationSuccess: true,
+    secretaryEmailSent,
+    token: cartilhaToken,
     expiresInMinutes: TOKEN_TTL_MINUTES,
   });
 });

@@ -73,6 +73,46 @@
     return true;
   }
 
+  function formatDateBr(value) {
+    return onlyDigits(value)
+      .slice(0, 8)
+      .replace(/(\d{2})(\d)/, "$1/$2")
+      .replace(/(\d{2})(\d)/, "$1/$2");
+  }
+
+  function parseDateBr(value) {
+    const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(String(value || "").trim());
+    if (!match) return null;
+    const day = Number(match[1]);
+    const month = Number(match[2]);
+    const year = Number(match[3]);
+    const date = new Date(year, month - 1, day);
+    if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) return null;
+    return date;
+  }
+
+  function toIsoDate(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return year + "-" + month + "-" + day;
+  }
+
+  function getDatePicker() {
+    const field = el("dataNascimento");
+    if (!field) return null;
+    return field._flatpickr || (field.closest(".date-field") && field.closest(".date-field")._flatpickr) || null;
+  }
+
+  function getBirthIso() {
+    const picker = getDatePicker();
+    if (picker && picker.selectedDates[0]) return toIsoDate(picker.selectedDates[0]);
+    const field = el("dataNascimento");
+    const visible = picker && picker.altInput;
+    const parsed = parseDateBr((visible && visible.value) || (field && field.value));
+    return parsed ? toIsoDate(parsed) : "";
+  }
+
   function idadeEmAnos(isoDate) {
     const birth = new Date(isoDate + "T00:00:00");
     if (isNaN(birth.getTime())) return -1;
@@ -90,6 +130,15 @@
       field.classList.toggle("is-invalid", Boolean(message));
       if (message) field.setAttribute("aria-invalid", "true");
       else field.removeAttribute("aria-invalid");
+    }
+    const picker = getDatePicker();
+    const birthWrap = field && field.closest(".date-field");
+    const birthVisible = picker && picker.altInput;
+    if (birthWrap) birthWrap.classList.toggle("is-invalid", id === "dataNascimento" && Boolean(message));
+    if (birthVisible && id === "dataNascimento") {
+      birthVisible.classList.toggle("is-invalid", Boolean(message));
+      if (message) birthVisible.setAttribute("aria-invalid", "true");
+      else birthVisible.removeAttribute("aria-invalid");
     }
     if (box) box.textContent = message || "";
   }
@@ -142,10 +191,12 @@
     };
 
     if (!isValidNome(el("nome").value)) mark("nome", "Informe seu nome completo.");
-    const birth = el("dataNascimento").value;
+    const birth = getBirthIso();
     if (!birth) mark("dataNascimento", "Informe sua data de nascimento.");
     else if (new Date(birth + "T00:00:00") > new Date()) mark("dataNascimento", "Informe uma data de nascimento válida.");
-    else if (idadeEmAnos(birth) < idadeMinima) mark("dataNascimento", "A idade mínima para manifestar interesse é " + idadeMinima + " anos.");
+    else if (idadeEmAnos(birth) < idadeMinima) {
+      mark("dataNascimento", "Para manifestar interesse é necessário possuir, no mínimo, " + idadeMinima + " anos de idade.");
+    }
     if (!isValidCpf(el("cpf").value)) mark("cpf", "Informe um CPF válido.");
     if (!estadoCivil()) mark("estadoCivil", "Selecione o estado civil.");
 
@@ -186,7 +237,7 @@
     return {
       website: el("website").value,
       nome: el("nome").value,
-      dataNascimento: el("dataNascimento").value,
+      dataNascimento: getBirthIso(),
       cpf: el("cpf").value,
       estadoCivil: civil,
       familiarNome: conjuge ? el("esposaNome").value : mae ? el("maeNome").value : "",
@@ -241,11 +292,71 @@
   let submitting = false;
 
   fillUfs();
-  el("dataNascimento").max = new Date().toISOString().slice(0, 10);
   el("motivacao").maxLength = motivacaoMax;
-  el("dataNascimento-hint").textContent = "Idade mínima de " + idadeMinima + " anos.";
+  const hintText = el("dataNascimento-hint-text") || el("dataNascimento-hint");
+  if (hintText) {
+    hintText.textContent = "Para esta manifestação, a idade mínima é de " + idadeMinima + " anos.";
+  }
   syncConditional();
   updateCount();
+
+  (function setupDatePicker() {
+    const field = el("dataNascimento");
+    const wrap = field && field.closest(".date-field");
+    if (!field) return;
+
+    const today = new Date();
+    const minDate = new Date(today.getFullYear() - 100, today.getMonth(), today.getDate());
+    const applyMask = function (input) {
+      input.addEventListener("input", function () {
+        input.value = formatDateBr(input.value);
+      });
+      input.addEventListener("blur", function () {
+        const parsed = parseDateBr(input.value);
+        if (!parsed) return;
+        if (parsed > today) {
+          if (getDatePicker()) getDatePicker().clear();
+          else input.value = "";
+          return;
+        }
+        if (getDatePicker()) getDatePicker().setDate(parsed, false);
+      });
+    };
+
+    if (window.flatpickr && wrap) {
+      const locale = (window.flatpickr.l10ns && window.flatpickr.l10ns.pt) || "pt";
+      window.flatpickr(wrap, {
+        wrap: true,
+        appendTo: document.body,
+        locale: locale,
+        dateFormat: "d/m/Y",
+        allowInput: true,
+        disableMobile: true,
+        monthSelectorType: "dropdown",
+        minDate: minDate,
+        maxDate: today,
+        onOpen: function (selectedDates, _dateStr, instance) {
+          if (!selectedDates.length) instance.jumpToDate(new Date(today.getFullYear() - 30, 0, 1), false);
+        },
+        onChange: function (selectedDates, _dateStr, instance) {
+          if (selectedDates.length && instance.isOpen) {
+            instance.close();
+            const next = el("cpf");
+            if (next) next.focus();
+          }
+        },
+        onReady: function (_dates, _str, instance) {
+          const input = instance.input;
+          input.setAttribute("placeholder", "dd/mm/aaaa");
+          input.setAttribute("inputmode", "numeric");
+          input.setAttribute("maxlength", "10");
+          applyMask(input);
+        },
+      });
+    } else {
+      applyMask(field);
+    }
+  })();
 
   el("estadoCivil").addEventListener("change", syncConditional);
   el("cpf").addEventListener("input", function () {
@@ -276,7 +387,11 @@
     if (!validate()) {
       setStatus("Revise os campos destacados.", "error");
       const invalid = form.querySelector(".is-invalid");
-      if (invalid) invalid.focus();
+      if (invalid) {
+        const picker = invalid._flatpickr || (invalid.querySelector && invalid.querySelector("#dataNascimento") && invalid.querySelector("#dataNascimento")._flatpickr);
+        const target = (picker && picker.altInput) || invalid;
+        if (target && target.focus) target.focus();
+      }
       return;
     }
     if (!config.supabaseUrl || !config.supabaseAnonKey) {
@@ -308,7 +423,9 @@
         "lacosManifestacao",
         JSON.stringify({
           ok: true,
+          registrationSuccess: true,
           nome: collapseSpaces(el("nome").value),
+          token: result.token || "",
           at: Date.now(),
         })
       );
@@ -321,4 +438,113 @@
       submitButton.textContent = defaultSubmitLabel;
     }
   });
+})();
+
+(function () {
+  const cartilhaSection = document.querySelector("#cartilha");
+  if (!cartilhaSection) return;
+
+  const config = window.APP_CONFIG || {};
+  const title = document.querySelector("#confirm-title");
+  const cartilhaStatus = document.querySelector("#cartilha-status");
+  const cartilhaLer = document.querySelector("#cartilha-ler");
+  const cartilhaBaixar = document.querySelector("#cartilha-baixar");
+
+  let data = null;
+  try {
+    data = JSON.parse(sessionStorage.getItem("lacosManifestacao") || "");
+  } catch (error) {
+    data = null;
+  }
+
+  if (!data || !data.ok || !data.nome) {
+    window.location.replace("interesse.html");
+    return;
+  }
+
+  if (title) {
+    title.textContent = "Obrigado, " + String(data.nome).split(" ")[0] + ".";
+  }
+
+  let cartilhaToken = data.token || "";
+  let cartilhaBlobUrl = null;
+  let cartilhaRequest = null;
+
+  function functionUrl(name) {
+    return String(config.supabaseUrl || "").replace(/\/$/, "") + "/functions/v1/" + name;
+  }
+
+  async function obterCartilha() {
+    if (cartilhaBlobUrl) return cartilhaBlobUrl;
+    if (!cartilhaToken) {
+      throw new Error("O acesso à cartilha não está mais disponível.");
+    }
+    if (!cartilhaRequest) {
+      cartilhaRequest = fetch(functionUrl("abrir-cartilha"), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: config.supabaseAnonKey,
+        },
+        body: JSON.stringify({ token: cartilhaToken }),
+      })
+        .then(async function (response) {
+          if (!response.ok) {
+            const payload = await response.json().catch(function () {
+              return {};
+            });
+            throw new Error(payload.error || "Não foi possível liberar a cartilha.");
+          }
+          const blob = await response.blob();
+          cartilhaBlobUrl = URL.createObjectURL(blob);
+          cartilhaToken = "";
+          if (data) {
+            data.token = "";
+            sessionStorage.setItem("lacosManifestacao", JSON.stringify(data));
+          }
+          return cartilhaBlobUrl;
+        })
+        .finally(function () {
+          cartilhaRequest = null;
+        });
+    }
+    return cartilhaRequest;
+  }
+
+  async function usarCartilha(acao) {
+    if (cartilhaStatus) cartilhaStatus.textContent = "Preparando o acesso à cartilha...";
+    try {
+      const url = await obterCartilha();
+      if (cartilhaStatus) cartilhaStatus.textContent = "";
+      if (acao === "baixar") {
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = "Cartilha-do-Candidato.pdf";
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        return;
+      }
+      window.open(url, "_blank", "noopener");
+    } catch (error) {
+      if (cartilhaStatus) cartilhaStatus.textContent = error.message;
+    }
+  }
+
+  if (cartilhaToken && config.supabaseUrl && config.supabaseAnonKey) {
+    cartilhaSection.hidden = false;
+    if (cartilhaLer) cartilhaLer.disabled = false;
+    if (cartilhaBaixar) cartilhaBaixar.disabled = false;
+  }
+
+  if (cartilhaLer) {
+    cartilhaLer.addEventListener("click", function () {
+      usarCartilha("ler");
+    });
+  }
+  if (cartilhaBaixar) {
+    cartilhaBaixar.addEventListener("click", function () {
+      usarCartilha("baixar");
+    });
+  }
 })();

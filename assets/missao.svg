@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 460" fill="none" aria-hidden="true">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#123a74"/>
+      <stop offset="0.55" stop-color="#0b2858"/>
+      <stop offset="1" stop-color="#071a3a"/>
+    </linearGradient>
+    <linearGradient id="glow" x1="0.5" y1="0" x2="0.5" y2="1">
+      <stop offset="0" stop-color="#c7a157" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#c7a157" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <rect width="720" height="460" rx="24" fill="url(#sky)"/>
+  <g stroke="#c7a157" stroke-opacity="0.28" stroke-width="1">
+    <path d="M360 18 L360 168"/>
+    <path d="M300 36 L360 168 L420 36"/>
+    <path d="M250 58 L360 168 L470 58"/>
+    <path d="M210 88 L360 168 L510 88"/>
+    <path d="M180 122 L360 168 L540 122"/>
+  </g>
+  <ellipse cx="360" cy="196" rx="78" ry="18" fill="url(#glow)"/>
+  <g fill="#dce9fb">
+    <rect x="86" y="168" width="52" height="168"/>
+    <rect x="74" y="152" width="76" height="18" rx="2"/>
+    <rect x="74" y="336" width="76" height="14"/>
+    <rect x="582" y="168" width="52" height="168"/>
+    <rect x="570" y="152" width="76" height="18" rx="2"/>
+    <rect x="570" y="336" width="76" height="14"/>
+  </g>
+  <g fill="#9cc7e8">
+    <rect x="98" y="186" width="28" height="132"/>
+    <rect x="594" y="186" width="28" height="132"/>
+  </g>
+  <g fill="#eef6fb" stroke="#c7a157" stroke-width="2">
+    <path d="M286 262c28-16 56-16 74 0v78c-20-12-52-12-74 0z"/>
+    <path d="M434 262c-28-16-56-16-74 0v78c20-12 52-12 74 0z"/>
+    <path d="M360 258v86"/>
+  </g>
+  <g fill="#c7a157">
+    <circle cx="360" cy="246" r="7"/>
+    <rect x="352" y="228" width="16" height="6" rx="2"/>
+  </g>
+  <g fill="#0b2858">
+    <polygon points="0,350 90,350 130,460 0,460"/>
+    <polygon points="90,350 180,350 220,460 130,460"/>
+    <polygon points="180,350 270,350 310,460 220,460"/>
+    <polygon points="270,350 360,350 400,460 310,460"/>
+    <polygon points="360,350 450,350 490,460 400,460"/>
+    <polygon points="450,350 540,350 580,460 490,460"/>
+    <polygon points="540,350 630,350 670,460 580,460"/>
+    <polygon points="630,350 720,350 720,460 670,460"/>
+  </g>
+  <g fill="#123a74">
+    <polygon points="0,350 90,350 50,460 0,460"/>
+    <polygon points="180,350 270,350 230,460 140,460"/>
+    <polygon points="360,350 450,350 410,460 320,460"/>
+    <polygon points="540,350 630,350 590,460 500,460"/>
+  </g>
+  <rect x="0" y="348" width="720" height="3" fill="#c7a157" opacity="0.55"/>
+</svg>

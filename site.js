@@ -90,29 +90,50 @@
   if (!header || !toggle || !drawer || !backdrop) return;
 
   const focusableSelector = "a[href], button:not([disabled])";
-  let lastFocus = null;
+  const freezeTargets = document.querySelectorAll(".skip-link, .header-inner, main, .site-footer");
+  let scrollY = 0;
 
   function focusables() {
     return Array.prototype.slice.call(drawer.querySelectorAll(focusableSelector));
   }
 
+  function isOpen() {
+    return document.body.classList.contains("menu-open");
+  }
+
+  function setFrozen(frozen) {
+    freezeTargets.forEach(function (node) {
+      if ("inert" in node) node.inert = frozen;
+      if (frozen) node.setAttribute("aria-hidden", "true");
+      else node.removeAttribute("aria-hidden");
+    });
+  }
+
   function setOpen(open) {
+    if (open === isOpen()) return;
     toggle.setAttribute("aria-expanded", open ? "true" : "false");
     toggle.setAttribute("aria-label", open ? "Fechar menu" : "Abrir menu");
-    drawer.hidden = !open;
-    backdrop.hidden = !open;
-    document.body.classList.toggle("nav-open", open);
+    drawer.setAttribute("aria-hidden", open ? "false" : "true");
+    backdrop.setAttribute("aria-hidden", open ? "false" : "true");
+    document.documentElement.classList.toggle("menu-open", open);
+    document.body.classList.toggle("menu-open", open);
+    setFrozen(open);
+
     if (open) {
-      lastFocus = document.activeElement;
+      scrollY = window.scrollY;
+      document.body.style.top = "-" + scrollY + "px";
       const items = focusables();
       if (items[0]) items[0].focus();
       return;
     }
-    if (lastFocus && typeof lastFocus.focus === "function") lastFocus.focus();
+
+    document.body.style.top = "";
+    window.scrollTo(0, scrollY);
+    toggle.focus();
   }
 
   toggle.addEventListener("click", function () {
-    setOpen(toggle.getAttribute("aria-expanded") !== "true");
+    setOpen(!isOpen());
   });
 
   if (closeButton) {
@@ -130,7 +151,7 @@
   });
 
   document.addEventListener("keydown", function (event) {
-    if (toggle.getAttribute("aria-expanded") !== "true") return;
+    if (!isOpen()) return;
     if (event.key === "Escape") {
       event.preventDefault();
       setOpen(false);
@@ -148,5 +169,9 @@
       event.preventDefault();
       first.focus();
     }
+  });
+
+  window.addEventListener("resize", function () {
+    if (window.matchMedia("(min-width: 981px)").matches) setOpen(false);
   });
 })();

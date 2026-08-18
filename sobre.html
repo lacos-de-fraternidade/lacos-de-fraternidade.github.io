@@ -17,7 +17,7 @@
     <meta property="og:image" content="assets/logo-classica.jpg" />
     <title>Sobre nós | ARLS Laços de Fraternidade 357 nº 251</title>
     <link rel="icon" href="assets/logo-classica.jpg" />
-    <link rel="stylesheet" href="styles.css?v=19" />
+    <link rel="stylesheet" href="styles.css?v=21" />
   </head>
   <body class="page-about">
     <a class="skip-link" href="#conteudo">Ir para o conteúdo</a>
@@ -51,8 +51,9 @@
           <img src="assets/icons/menu.svg" alt="" width="22" height="22" />
         </button>
       </div>
-      <div class="nav-backdrop" hidden></div>
-      <div class="nav-drawer" id="menu-movel" hidden>
+    </header>
+    <div class="nav-backdrop" aria-hidden="true"></div>
+    <div class="nav-drawer" id="menu-movel" aria-hidden="true">
         <div class="nav-drawer-head">
           <p>Navegação</p>
           <button class="nav-close" type="button" aria-label="Fechar menu">
@@ -63,7 +64,7 @@
           <ul class="nav-list">
             <li><a href="index.html">Início</a></li>
             <li><a href="sobre.html" aria-current="page">Sobre nós</a></li>
-            <li><a class="nav-cta" href="interesse.html">Cadastro do candidato</a></li>
+            <li class="nav-drawer-item--cta"><a class="nav-cta" href="interesse.html">Cadastro do candidato</a></li>
             <li><a href="privacidade.html">Política de privacidade</a></li>
             <li>
               <a class="nav-social" href="https://www.instagram.com/lacos.de.fraternidade357" target="_blank" rel="noopener noreferrer" aria-label="Acessar o Instagram oficial da ARLS Laços de Fraternidade">
@@ -73,8 +74,7 @@
             </li>
           </ul>
         </nav>
-      </div>
-    </header>
+    </div>
 
     <main id="conteudo">
       <section class="about-hero" id="historia" aria-labelledby="sobre-titulo">
@@ -206,7 +206,7 @@
           <div class="sessions-block">
             <p class="eyebrow">Nossas sessões</p>
             <h2 id="sessoes-titulo">Encontros regulares, com discrição e regularidade</h2>
-            <p>Nossas sessões ocorrem na segunda e na quarta quarta-feira de cada mês, às 19h30.</p>
+            <p>As sessões acontecem na 2ª quarta-feira e na 4ª quarta-feira de cada mês, às 19h30. Consulte abaixo as próximas datas de reunião.</p>
             <aside class="sessions-card">
               <p class="sessions-card-label" id="sessoes-proximas-label">Próximas sessões</p>
               <ul class="session-dates" id="session-dates"></ul>
@@ -247,10 +247,10 @@
             </div>
           </div>
           <span class="footer-rule" aria-hidden="true"></span>
-          <p class="footer-oriente">Oriente de Duque de Caxias — <a href="https://www.glmerj.org.br/" target="_blank" rel="noopener noreferrer">GLMERJ</a></p>
+          <p class="footer-oriente">Oriente de Duque de Caxias • <a href="https://www.glmerj.org.br/" target="_blank" rel="noopener noreferrer">GLMERJ</a></p>
           <p class="footer-lead">Fundada em 06 de agosto de 2018, buscamos o aperfeiçoamento moral, intelectual e o compromisso com a sociedade.</p>
         </div>
-        <div class="footer-col">
+        <div class="footer-col footer-col--nav">
           <h2>Navegação</h2>
           <ul>
             <li><a href="index.html">Início</a></li>
@@ -258,7 +258,7 @@
             <li><a href="interesse.html">Cadastro do candidato</a></li>
           </ul>
         </div>
-        <div class="footer-col">
+        <div class="footer-col footer-col--loja">
           <h2>A Loja</h2>
           <ul>
             <li><a href="sobre.html#historia">Nossa história</a></li>
@@ -266,16 +266,16 @@
             <li><a href="sobre.html#sessoes">Sessões</a></li>
           </ul>
         </div>
-        <div class="footer-col">
+        <div class="footer-col footer-col--info">
           <h2>Informações</h2>
           <div class="footer-meta">
-            <p class="footer-meta-item">
+            <p class="footer-meta-item footer-meta-item--address">
               <img class="footer-ico" src="assets/icons/localizacao.svg" alt="" width="16" height="16" />
               <span>Rua 11 de Junho, 42<br />Jardim Vinte e Cinco de Agosto<br />Duque de Caxias — RJ<br />CEP 25010-100</span>
             </p>
-            <p class="footer-meta-item">
+            <p class="footer-meta-item footer-meta-item--sessions">
               <img class="footer-ico" src="assets/icons/relogio.svg" alt="" width="16" height="16" />
-              <span><strong>Sessões</strong><br />Segunda e quarta quarta-feira de cada mês, às 19h30.</span>
+              <span><strong>Sessões</strong><br />As sessões acontecem na 2ª quarta-feira e na 4ª quarta-feira de cada mês, às 19h30.</span>
             </p>
             <p class="footer-meta-item">
               <img class="footer-ico" src="assets/icons/jurisdicao.svg" alt="" width="16" height="16" />
@@ -283,7 +283,7 @@
             </p>
           </div>
         </div>
-        <div class="footer-col">
+        <div class="footer-col footer-col--social">
           <h2>Siga-nos</h2>
           <a class="footer-social" href="https://www.instagram.com/lacos.de.fraternidade357" target="_blank" rel="noopener noreferrer" aria-label="Acessar o Instagram oficial da ARLS Laços de Fraternidade">
             <img src="assets/icons/instagram.svg" alt="" width="18" height="18" />
@@ -299,6 +299,6 @@
         <p>© 2018–<span data-current-year>2026</span> ARLS Laços de Fraternidade 357 nº 251 — Todos os direitos reservados.</p>
       </div>
     </footer>
-    <script src="site.js?v=15"></script>
+    <script src="site.js?v=16"></script>
   </body>
 </html>

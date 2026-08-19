@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self' https://cdn.jsdelivr.net; connect-src 'self' https://klxcwkclydirdxomkbtv.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>Redefinir senha | Área dos Irmãos</title>
+    <link rel="icon" href="../../assets/logo-classica.jpg" />
+    <link rel="stylesheet" href="../css/area.css" />
+    <script src="../../config.js"></script>
+  </head>
+  <body class="area-body">
+    <main class="auth-shell">
+      <section class="auth-card">
+        <p class="eyebrow">Segurança</p>
+        <h1>Nova senha</h1>
+        <form id="redefinir-form">
+          <div class="field">
+            <label for="senha">Nova senha</label>
+            <input id="senha" type="password" autocomplete="new-password" required />
+            <div class="meter"><span id="meter-bar" style="width:0"></span></div>
+            <small id="meter-label">Força da senha</small>
+          </div>
+          <div class="field">
+            <label for="confirma">Confirmar senha</label>
+            <input id="confirma" type="password" autocomplete="new-password" required />
+          </div>
+          <p class="status" id="status" role="status"></p>
+          <button class="button button-primary" type="submit">Salvar senha</button>
+        </form>
+      </section>
+    </main>
+    <script type="module" src="./redefinir.js"></script>
+  </body>
+</html>

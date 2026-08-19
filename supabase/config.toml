@@ -3,3 +3,15 @@ verify_jwt = false
 
 [functions.abrir-cartilha]
 verify_jwt = false
+
+[functions.login-with-cim]
+verify_jwt = false
+
+[functions.ativar-conta]
+verify_jwt = false
+
+[functions.recuperar-senha-cim]
+verify_jwt = false
+
+[functions.gerenciar-irmao]
+verify_jwt = false

@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self' https://cdn.jsdelivr.net; connect-src 'self' https://klxcwkclydirdxomkbtv.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'" />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>Ativar conta | Área dos Irmãos</title>
+    <link rel="icon" href="../../assets/logo-classica.jpg" />
+    <link rel="stylesheet" href="../css/area.css" />
+    <script src="../../config.js"></script>
+  </head>
+  <body class="area-body">
+    <main class="auth-shell">
+      <section class="auth-card">
+        <p class="eyebrow">Convite</p>
+        <h1>Ativar acesso</h1>
+        <p>Confirme sua CIM e crie uma senha pessoal. Este convite é individual e intransferível.</p>
+        <form id="ativar-form">
+          <div class="field">
+            <label for="cim">CIM</label>
+            <input id="cim" name="cim" inputmode="numeric" autocomplete="username" required maxlength="20" />
+          </div>
+          <div class="field">
+            <label for="senha">Nova senha</label>
+            <input id="senha" name="senha" type="password" autocomplete="new-password" required />
+            <div class="meter" aria-hidden="true"><span id="meter-bar" style="width:0"></span></div>
+            <small id="meter-label">Força da senha</small>
+          </div>
+          <div class="field">
+            <label for="confirma">Confirmar senha</label>
+            <input id="confirma" name="confirma" type="password" autocomplete="new-password" required />
+          </div>
+          <div class="field">
+            <label><input id="termos" type="checkbox" required /> Li e aceito os termos de uso da Área dos Irmãos.</label>
+          </div>
+          <p class="status" id="status" role="status"></p>
+          <button class="button button-primary" type="submit">Concluir ativação</button>
+        </form>
+      </section>
+    </main>
+    <script type="module" src="./ativar.js"></script>
+  </body>
+</html>

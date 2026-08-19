@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self' https://cdn.jsdelivr.net; connect-src 'self' https://klxcwkclydirdxomkbtv.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>Calendário | Área dos Irmãos</title>
+    <link rel="stylesheet" href="../css/area.css" />
+    <script src="../../config.js"></script>
+  </head>
+  <body class="area-body">
+    <div id="shell"></div>
+    <main class="area-main"><div class="area-wrap"><section class="area-card"><h1>Calendário interno</h1><div id="lista"></div></section></div></main>
+    <script type="module">
+      import { bootPage } from "../js/page.js";
+      await bootPage("Calendário", async ({ supabase }) => {
+        const { data } = await supabase.from("eventos_internos").select("titulo, descricao, inicia_em").eq("publicado", true).order("inicia_em");
+        const lista = document.querySelector("#lista");
+        if (!data?.length) { lista.textContent = "Nenhum evento interno publicado."; return; }
+        const ul = document.createElement("ul");
+        data.forEach((item) => {
+          const li = document.createElement("li");
+          li.textContent = `${new Date(item.inicia_em).toLocaleString("pt-BR")} — ${item.titulo}`;
+          ul.append(li);
+        });
+        lista.append(ul);
+      });
+    </script>
+  </body>
+</html>

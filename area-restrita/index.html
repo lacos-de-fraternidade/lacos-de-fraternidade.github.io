@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self' https://cdn.jsdelivr.net; connect-src 'self' https://klxcwkclydirdxomkbtv.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>Área dos Irmãos</title>
+    <link rel="icon" href="../assets/logo-classica.jpg" />
+    <link rel="stylesheet" href="./css/area.css" />
+    <script src="../config.js"></script>
+  </head>
+  <body class="area-body">
+    <div id="shell"></div>
+    <main class="area-main">
+      <div class="area-wrap">
+        <h1 id="saudacao">Bem-vindo</h1>
+        <div class="grid-cards">
+          <section class="area-card">
+            <h2>Próximo evento</h2>
+            <p id="proximo-evento">Nenhum evento interno publicado no momento.</p>
+          </section>
+          <section class="area-card">
+            <h2>Aniversários próximos</h2>
+            <p id="proximos-niver">Nenhuma data autorizada para os próximos dias.</p>
+          </section>
+          <section class="area-card">
+            <h2>Iniciações</h2>
+            <p id="proximas-iniciacoes">Nenhum aniversário de iniciação cadastrado.</p>
+          </section>
+          <section class="area-card">
+            <h2>Comunicados</h2>
+            <div id="comunicados"><p>Não há comunicados no momento.</p></div>
+          </section>
+        </div>
+      </div>
+    </main>
+    <script type="module" src="./home.js"></script>
+  </body>
+</html>

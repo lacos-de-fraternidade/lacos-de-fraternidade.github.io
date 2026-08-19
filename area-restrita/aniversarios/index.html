@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self' https://cdn.jsdelivr.net; connect-src 'self' https://klxcwkclydirdxomkbtv.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>Aniversários | Área dos Irmãos</title>
+    <link rel="stylesheet" href="../css/area.css" />
+    <script src="../../config.js"></script>
+  </head>
+  <body class="area-body">
+    <div id="shell"></div>
+    <main class="area-main"><div class="area-wrap"><section class="area-card"><h1>Aniversários</h1><div id="lista"></div></section></div></main>
+    <script type="module">
+      import { bootPage } from "../js/page.js";
+      await bootPage("Aniversários", async ({ supabase }) => {
+        const { data } = await supabase.from("celebracoes").select("nome_exibicao, mes, dia").eq("tipo", "aniversario").eq("autorizado", true).order("mes").order("dia");
+        const lista = document.querySelector("#lista");
+        if (!data?.length) { lista.textContent = "Nenhum aniversário autorizado no momento."; return; }
+        const ul = document.createElement("ul");
+        data.forEach((item) => {
+          const li = document.createElement("li");
+          li.textContent = `${String(item.dia).padStart(2,"0")}/${String(item.mes).padStart(2,"0")} — ${item.nome_exibicao}`;
+          ul.append(li);
+        });
+        lista.append(ul);
+      });
+    </script>
+  </body>
+</html>

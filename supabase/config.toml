@@ -8,10 +8,13 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.ativar-conta]
-verify_jwt = false
+verify_jwt = true
 
 [functions.recuperar-senha-cim]
 verify_jwt = false
 
 [functions.gerenciar-irmao]
+verify_jwt = true
+
+[functions.bootstrap-convite-admin]
 verify_jwt = false

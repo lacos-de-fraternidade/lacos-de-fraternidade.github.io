@@ -1,4 +1,3 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.8";
 import { hasValidPublishableKey, unauthorizedResponse } from "../_shared/auth.ts";
 import { jsonResponse, optionsResponse } from "../_shared/cors.ts";
 import { isValidCim, normalizeCim } from "../_shared/cim.ts";
@@ -6,8 +5,10 @@ import {
   GENERIC_LATER_ERROR,
   GENERIC_LOGIN_ERROR,
   clientIp,
-  hashPrivate,
+  getAuthPepper,
+  hmacPrivate,
   serviceClient,
+  userAuthClient,
   writeAuthLog,
 } from "../_shared/members.ts";
 
@@ -15,6 +16,7 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return optionsResponse(req);
   if (req.method !== "POST") return jsonResponse(req, 405, { ok: false, error: GENERIC_LOGIN_ERROR });
   if (!hasValidPublishableKey(req)) return unauthorizedResponse(req);
+  if (!getAuthPepper()) return jsonResponse(req, 503, { ok: false, error: GENERIC_LATER_ERROR });
 
   let payload: Record<string, unknown>;
   try {
@@ -36,7 +38,9 @@ Deno.serve(async (req) => {
   const maxIp = config?.max_falhas_ip ?? 20;
   const blockMin = config?.bloqueio_inicial_minutos ?? 15;
 
-  const ipHash = await hashPrivate(clientIp(req) || "unknown");
+  const ipHash = await hmacPrivate("ip", clientIp(req) || "unknown");
+  if (!ipHash) return jsonResponse(req, 503, { ok: false, error: GENERIC_LATER_ERROR });
+
   const { data: ipRow } = await supabase.from("auth_rate_ip").select("*").eq("ip_hash", ipHash).maybeSingle();
   if (ipRow?.bloqueado_ate && new Date(ipRow.bloqueado_ate) > new Date()) {
     await writeAuthLog({ cim, evento: "conta_bloqueada", sucesso: false, req });
@@ -84,9 +88,7 @@ Deno.serve(async (req) => {
     return jsonResponse(req, 401, { ok: false, error: GENERIC_LOGIN_ERROR });
   }
 
-  const url = Deno.env.get("SUPABASE_URL") ?? "";
-  const anon = Deno.env.get("SUPABASE_ANON_KEY") || Deno.env.get("SUPABASE_PUBLISHABLE_KEY") || "";
-  const authClient = createClient(url, anon, { auth: { persistSession: false, autoRefreshToken: false } });
+  const authClient = userAuthClient();
   const { data, error } = await authClient.auth.signInWithPassword({
     email: member.email,
     password,

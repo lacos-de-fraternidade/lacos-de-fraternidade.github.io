@@ -3,13 +3,14 @@ import { jsonResponse, optionsResponse } from "../_shared/cors.ts";
 import { isValidCim, normalizeCim, normalizeEmail } from "../_shared/cim.ts";
 import {
   GENERIC_INVITE_ERROR,
-  requireStaff,
-  requireUser,
+  inviteExpiresAt,
+  requireActiveMember,
+  revokeMemberAuth,
+  sendMemberInvite,
   serviceClient,
   writeAuthLog,
 } from "../_shared/members.ts";
-
-const SITE_URL = Deno.env.get("PUBLIC_SITE_URL") || "https://lacos-de-fraternidade.github.io";
+import { authorizeGerenciarAcao } from "../_shared/staff-actions.ts";
 
 function maskCim(cim: string) {
   if (cim.length <= 4) return "****";
@@ -33,22 +34,6 @@ function publicMember(row: Record<string, unknown>) {
   };
 }
 
-async function sendInvite(member: { id: string; email: string; cim: string }, hours: number, req: Request, userId?: string) {
-  const supabase = serviceClient();
-  const expires = new Date(Date.now() + hours * 60 * 60 * 1000).toISOString();
-  const redirectTo = `${SITE_URL}/area-restrita/ativar/`;
-  const invited = await supabase.auth.admin.inviteUserByEmail(member.email, { redirectTo });
-  if (invited.error) {
-    await supabase.auth.resetPasswordForEmail(member.email, { redirectTo });
-  }
-  await supabase.from("irmaos_autorizados").update({
-    convite_enviado_em: new Date().toISOString(),
-    convite_expira_em: expires,
-    conta_ativada: false,
-  }).eq("id", member.id);
-  await writeAuthLog({ cim: member.cim, evento: "convite_enviado", sucesso: true, req, authUserId: userId });
-}
-
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return optionsResponse(req);
   if (req.method !== "POST") return jsonResponse(req, 405, { ok: false, error: GENERIC_INVITE_ERROR });
@@ -62,26 +47,19 @@ Deno.serve(async (req) => {
   }
 
   const acao = String(payload.acao || "");
-  const supabase = serviceClient();
-  const { data: config } = await supabase.from("configuracoes_autenticacao").select("*").eq("id", 1).maybeSingle();
-  const hours = config?.convite_validade_horas ?? 72;
-  const bootstrapSecret = Deno.env.get("BOOTSTRAP_INVITE_SECRET") || "";
-  const providedSecret = req.headers.get("x-bootstrap-secret") || "";
-  const { count: activatedAdmins } = await supabase
-    .from("irmaos_autorizados")
-    .select("id", { count: "exact", head: true })
-    .eq("perfil", "administrador")
-    .eq("conta_ativada", true);
+  const identity = await requireActiveMember(req);
+  if (identity instanceof Response) return identity;
 
-  let staff: Awaited<ReturnType<typeof requireStaff>> | null = null;
-  const canBootstrap = Boolean(bootstrapSecret) && providedSecret === bootstrapSecret && (activatedAdmins ?? 0) === 0;
-  if (!canBootstrap) {
-    staff = await requireStaff(req, acao === "alterar_perfil" || acao === "revogar" || acao === "logs" || acao === "configurar");
-    if (staff instanceof Response) return staff;
+  const allowed = authorizeGerenciarAcao(identity.member, acao);
+  if (!allowed.ok) {
+    return jsonResponse(req, allowed.status, { ok: false, error: GENERIC_INVITE_ERROR });
   }
 
-  const actorId = staff && !(staff instanceof Response) ? staff.user.id : undefined;
-  const actorPerfil = staff && !(staff instanceof Response) ? staff.member.perfil : "administrador";
+  const actorId = identity.user.id;
+  const actorPerfil = identity.member.perfil;
+  const supabase = serviceClient();
+  const { data: config } = await supabase.from("configuracoes_autenticacao").select("*").eq("id", 1).maybeSingle();
+  const expiresAt = inviteExpiresAt(config);
 
   if (acao === "listar") {
     const { data } = await supabase.from("irmaos_autorizados").select("*").order("nome");
@@ -131,14 +109,22 @@ Deno.serve(async (req) => {
     const id = String(payload.id || "");
     const { data: member } = await supabase.from("irmaos_autorizados").select("*").eq("id", id).maybeSingle();
     if (!member || !member.ativo) return jsonResponse(req, 400, { ok: false, error: GENERIC_INVITE_ERROR });
-    await sendInvite(member, hours, req, actorId);
+    await sendMemberInvite(member, expiresAt, req, actorId);
     return jsonResponse(req, 200, { ok: true });
   }
 
   if (acao === "ativar" || acao === "desativar") {
     const id = String(payload.id || "");
-    const { error } = await supabase.from("irmaos_autorizados").update({ ativo: acao === "ativar" }).eq("id", id);
-    if (error) return jsonResponse(req, 400, { ok: false, error: GENERIC_INVITE_ERROR });
+    const { data: member } = await supabase.from("irmaos_autorizados").select("*").eq("id", id).maybeSingle();
+    if (!member) return jsonResponse(req, 400, { ok: false, error: GENERIC_INVITE_ERROR });
+    if (acao === "desativar") {
+      await revokeMemberAuth(member.auth_user_id, true);
+      await supabase.from("irmaos_autorizados").update({ ativo: false }).eq("id", id);
+      await writeAuthLog({ cim: member.cim, evento: "conta_desativada", sucesso: true, req, authUserId: actorId });
+    } else {
+      await revokeMemberAuth(member.auth_user_id, false);
+      await supabase.from("irmaos_autorizados").update({ ativo: true }).eq("id", id);
+    }
     return jsonResponse(req, 200, { ok: true });
   }
 
@@ -167,9 +153,7 @@ Deno.serve(async (req) => {
     const id = String(payload.id || "");
     const { data: member } = await supabase.from("irmaos_autorizados").select("*").eq("id", id).maybeSingle();
     if (!member) return jsonResponse(req, 400, { ok: false, error: GENERIC_INVITE_ERROR });
-    if (member.auth_user_id) {
-      await supabase.auth.admin.signOut(member.auth_user_id, "global");
-    }
+    await revokeMemberAuth(member.auth_user_id, true);
     await supabase.from("irmaos_autorizados").update({
       ativo: false,
       conta_ativada: false,
@@ -205,17 +189,13 @@ Deno.serve(async (req) => {
   }
 
   if (acao === "registrar_senha_alterada") {
-    const auth = await requireUser(req);
-    if (auth instanceof Response) return auth;
-    await writeAuthLog({ evento: "senha_alterada", sucesso: true, req, authUserId: auth.user.id });
-    await supabase.auth.admin.signOut(auth.user.id, "others");
+    await writeAuthLog({ evento: "senha_alterada", sucesso: true, req, authUserId: actorId });
+    await supabase.auth.admin.signOut(actorId, "others");
     return jsonResponse(req, 200, { ok: true });
   }
 
   if (acao === "registrar_logout") {
-    const auth = await requireUser(req);
-    if (auth instanceof Response) return jsonResponse(req, 200, { ok: true });
-    await writeAuthLog({ evento: "logout", sucesso: true, req, authUserId: auth.user.id });
+    await writeAuthLog({ evento: "logout", sucesso: true, req, authUserId: actorId });
     return jsonResponse(req, 200, { ok: true });
   }
 

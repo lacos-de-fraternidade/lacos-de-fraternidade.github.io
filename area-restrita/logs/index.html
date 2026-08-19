@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self' https://cdn.jsdelivr.net; connect-src 'self' https://klxcwkclydirdxomkbtv.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>Logs | Área dos Irmãos</title>
+    <link rel="stylesheet" href="../css/area.css" />
+    <script src="../../config.js"></script>
+  </head>
+  <body class="area-body">
+    <div id="shell"></div>
+    <main class="area-main"><div class="area-wrap"><section class="area-card">
+      <h1>Logs administrativos</h1>
+      <p>Não há senhas, tokens ou CIM em texto puro nestes registros. MFA ainda não está ativo.</p>
+      <div class="area-table-wrap"><table><thead><tr><th>Quando</th><th>Evento</th><th>Sucesso</th></tr></thead><tbody id="logs"></tbody></table></div>
+    </section></div></main>
+    <script type="module">
+      import { requireMember } from "../js/guard.js";
+      import { bootPage } from "../js/page.js";
+      import { invokeFunction } from "../js/client.js";
+      const ctx = await requireMember({ admin: true });
+      if (!ctx) throw new Error("redirect");
+      await bootPage("Logs", async () => {
+        const { data } = await invokeFunction("gerenciar-irmao", { acao: "logs" }, ctx.session.access_token);
+        const body = document.querySelector("#logs");
+        (data.logs || []).forEach((item) => {
+          const tr = document.createElement("tr");
+          [new Date(item.criado_em).toLocaleString("pt-BR"), item.evento, item.sucesso ? "sim" : "não"].forEach((value) => {
+            const td = document.createElement("td");
+            td.textContent = value;
+            tr.append(td);
+          });
+          body.append(tr);
+        });
+      });
+    </script>
+  </body>
+</html>

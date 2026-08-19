@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self' https://cdn.jsdelivr.net; connect-src 'self' https://klxcwkclydirdxomkbtv.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>Gerenciar membros | Área dos Irmãos</title>
+    <link rel="stylesheet" href="../css/area.css" />
+    <script src="../../config.js"></script>
+  </head>
+  <body class="area-body">
+    <div id="shell"></div>
+    <main class="area-main">
+      <div class="area-wrap">
+        <section class="area-card">
+          <h1>Gerenciar membros</h1>
+          <p>Cadastro fechado: somente a Secretaria inclui Irmãos autorizados.</p>
+          <form id="criar-form" class="grid-cards">
+            <div class="field"><label for="nome">Nome</label><input id="nome" required /></div>
+            <div class="field"><label for="cim">CIM</label><input id="cim" required inputmode="numeric" /></div>
+            <div class="field"><label for="email">E-mail</label><input id="email" type="email" required /></div>
+            <div class="field admin-only"><label for="perfil">Perfil</label>
+              <select id="perfil">
+                <option value="irmao">Irmão</option>
+                <option value="secretario">Secretário</option>
+                <option value="administrador">Administrador</option>
+              </select>
+            </div>
+            <button class="button button-primary" type="submit">Cadastrar</button>
+          </form>
+          <p class="status" id="status" role="status"></p>
+          <div class="area-table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Nome</th><th>CIM</th><th>E-mail</th><th>Perfil</th><th>Situação</th><th>Ativada</th><th>Convite</th><th>Último acesso</th><th>Ações</th>
+                </tr>
+              </thead>
+              <tbody id="membros"></tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    </main>
+    <script type="module" src="./admin.js"></script>
+  </body>
+</html>

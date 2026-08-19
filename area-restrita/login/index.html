@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self' https://cdn.jsdelivr.net; connect-src 'self' https://klxcwkclydirdxomkbtv.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>Área dos Irmãos | Laços de Fraternidade</title>
+    <link rel="icon" href="../../assets/logo-classica.jpg" />
+    <link rel="stylesheet" href="../css/area.css" />
+    <script src="../../config.js"></script>
+  </head>
+  <body class="area-body">
+    <main class="auth-shell">
+      <section class="auth-card">
+        <img src="../../assets/logo-classica.jpg" alt="" width="72" height="72" style="border-radius:50%;margin-inline:auto" />
+        <p class="eyebrow">Acesso restrito</p>
+        <h1>Área dos Irmãos</h1>
+        <p>Acesso exclusivo aos membros previamente autorizados pela ARLS Laços de Fraternidade 357 nº 251.</p>
+        <p>O acesso à Área dos Irmãos é exclusivo para membros previamente cadastrados pela Secretaria.</p>
+        <form id="login-form">
+          <div class="field">
+            <label for="cim">CIM</label>
+            <input id="cim" name="cim" inputmode="numeric" autocomplete="username" required maxlength="20" />
+          </div>
+          <div class="field">
+            <label for="senha">Senha</label>
+            <div class="password-row">
+              <input id="senha" name="senha" type="password" autocomplete="current-password" required />
+              <button type="button" id="toggle-senha">Mostrar</button>
+            </div>
+          </div>
+          <p class="status" id="status" role="status"></p>
+          <button class="button button-primary" type="submit">Entrar</button>
+        </form>
+        <div class="auth-links">
+          <a href="../recuperar/">Esqueci minha senha</a>
+          <a href="../../index.html">Voltar ao site</a>
+        </div>
+      </section>
+    </main>
+    <script type="module" src="./login.js"></script>
+  </body>
+</html>

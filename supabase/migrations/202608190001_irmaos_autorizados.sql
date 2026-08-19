@@ -10,6 +10,7 @@ create or replace function public.normalize_cim(raw text)
 returns text
 language sql
 immutable
+set search_path = public, pg_temp
 as $$
   select regexp_replace(coalesce(raw, ''), '[^0-9]', '', 'g');
 $$;
@@ -18,6 +19,7 @@ create or replace function public.normalize_email(raw text)
 returns text
 language sql
 immutable
+set search_path = public, pg_temp
 as $$
   select lower(btrim(coalesce(raw, '')));
 $$;
@@ -73,6 +75,7 @@ on conflict (id) do nothing;
 create or replace function private.touch_atualizado_em()
 returns trigger
 language plpgsql
+set search_path = public, pg_temp
 as $$
 begin
   new.atualizado_em := now();
@@ -83,6 +86,7 @@ $$;
 create or replace function private.normalize_irmao_row()
 returns trigger
 language plpgsql
+set search_path = public, pg_temp
 as $$
 begin
   new.cim := public.normalize_cim(new.cim);
@@ -165,7 +169,7 @@ alter table public.configuracoes_autenticacao enable row level security;
 revoke all on table public.irmaos_autorizados from public, anon, authenticated;
 revoke all on table public.configuracoes_autenticacao from public, anon, authenticated;
 
-grant select, insert, update on table public.irmaos_autorizados to authenticated;
+grant select on table public.irmaos_autorizados to authenticated;
 grant all on table public.irmaos_autorizados to service_role;
 grant all on table public.configuracoes_autenticacao to service_role;
 

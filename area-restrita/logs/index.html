@@ -12,30 +12,63 @@
   </head>
   <body class="area-body">
     <div id="shell"></div>
-    <main class="area-main"><div class="area-wrap"><section class="area-card">
-      <h1>Logs administrativos</h1>
-      <p>Não há senhas, tokens ou CIM em texto puro nestes registros. MFA ainda não está ativo.</p>
-      <div class="area-table-wrap"><table><thead><tr><th>Quando</th><th>Evento</th><th>Sucesso</th></tr></thead><tbody id="logs"></tbody></table></div>
-    </section></div></main>
-    <script type="module">
-      import { requireMember } from "../js/guard.js";
-      import { bootPage } from "../js/page.js";
-      import { invokeFunction } from "../js/client.js";
-      const ctx = await requireMember({ admin: true });
-      if (!ctx) throw new Error("redirect");
-      await bootPage("Logs", async () => {
-        const { data } = await invokeFunction("gerenciar-irmao", { acao: "logs" }, ctx.session.access_token);
-        const body = document.querySelector("#logs");
-        (data.logs || []).forEach((item) => {
-          const tr = document.createElement("tr");
-          [new Date(item.criado_em).toLocaleString("pt-BR"), item.evento, item.sucesso ? "sim" : "não"].forEach((value) => {
-            const td = document.createElement("td");
-            td.textContent = value;
-            tr.append(td);
-          });
-          body.append(tr);
-        });
-      });
-    </script>
+    <main class="area-main">
+      <div class="area-wrap">
+        <header class="page-hero">
+          <p class="eyebrow">Auditoria</p>
+          <h1>Logs da Área dos Irmãos</h1>
+          <p class="muted">Registros de acesso e de ações administrativas. Senhas, tokens e CIM completa não são exibidos.</p>
+          <div class="gold-rule" aria-hidden="true"></div>
+        </header>
+        <section class="area-card">
+          <div class="logs-filters">
+            <div class="field"><label for="filtro-periodo">Período</label>
+              <select id="filtro-periodo">
+                <option value="7">7 dias</option>
+                <option value="30" selected>30 dias</option>
+                <option value="90">90 dias</option>
+                <option value="all">Todo o período</option>
+              </select>
+            </div>
+            <div class="field"><label for="filtro-evento">Evento</label>
+              <select id="filtro-evento"><option value="">Todos</option></select>
+            </div>
+            <div class="field"><label for="filtro-resultado">Resultado</label>
+              <select id="filtro-resultado">
+                <option value="">Todos</option>
+                <option value="ok">Sucesso</option>
+                <option value="fail">Falha</option>
+              </select>
+            </div>
+            <div class="field"><label for="filtro-usuario">Usuário</label>
+              <input id="filtro-usuario" placeholder="Nome" />
+            </div>
+            <div class="field"><label for="filtro-ordem">Ordenar</label>
+              <select id="filtro-ordem">
+                <option value="desc" selected>Data mais recente</option>
+                <option value="asc">Data mais antiga</option>
+              </select>
+            </div>
+          </div>
+          <div class="logs-toolbar">
+            <p class="muted" id="logs-count">Carregando registros...</p>
+            <button type="button" class="button button-secondary" id="limpar-filtros">Limpar filtros</button>
+          </div>
+          <div class="area-table-wrap">
+            <table>
+              <thead><tr><th>Quando</th><th>Evento</th><th>Usuário</th><th>Resultado</th><th>Origem</th></tr></thead>
+              <tbody id="logs"></tbody>
+            </table>
+          </div>
+          <p class="muted logs-empty" id="logs-empty" hidden>Nenhum registro foi encontrado para os filtros selecionados.</p>
+          <div class="logs-pager" id="logs-pager" hidden>
+            <button type="button" class="button button-secondary" id="logs-prev">Anterior</button>
+            <span class="muted" id="logs-page"></span>
+            <button type="button" class="button button-secondary" id="logs-next">Próxima</button>
+          </div>
+        </section>
+      </div>
+    </main>
+    <script type="module" src="./logs.js"></script>
   </body>
 </html>

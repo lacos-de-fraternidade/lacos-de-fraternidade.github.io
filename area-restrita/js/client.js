@@ -1,6 +1,6 @@
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.8/+esm";
 
-export function areaClient() {
+export function areaClient(authOptions = {}) {
   const cfg = window.APP_CONFIG;
   if (!cfg?.supabaseUrl || !cfg?.supabaseAnonKey) {
     throw new Error("Configuração indisponível.");
@@ -11,6 +11,7 @@ export function areaClient() {
       autoRefreshToken: true,
       detectSessionInUrl: true,
       storage: window.localStorage,
+      ...authOptions,
     },
   });
 }

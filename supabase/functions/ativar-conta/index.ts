@@ -77,6 +77,7 @@ Deno.serve(async (req) => {
     return jsonResponse(req, 400, { ok: false, error: GENERIC_INVITE_ERROR });
   }
 
+  await writeAuthLog({ cim, evento: "convite_aceito", sucesso: true, req, authUserId: auth.user.id });
   await writeAuthLog({ cim, evento: "conta_ativada", sucesso: true, req, authUserId: auth.user.id });
   return jsonResponse(req, 200, { ok: true });
 });

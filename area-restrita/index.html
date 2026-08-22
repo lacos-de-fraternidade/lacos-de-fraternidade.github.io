@@ -15,23 +15,29 @@
     <div id="shell"></div>
     <main class="area-main">
       <div class="area-wrap">
-        <h1 id="saudacao">Bem-vindo</h1>
-        <div class="grid-cards">
-          <section class="area-card">
-            <h2>Próximo evento</h2>
-            <p id="proximo-evento">Nenhum evento interno publicado no momento.</p>
+        <header class="page-hero">
+          <p class="eyebrow">Bem-vindo à Área dos Irmãos</p>
+          <h1 id="saudacao">Bem-vindo</h1>
+          <p class="page-date" id="data-hoje"></p>
+          <div class="gold-rule" aria-hidden="true"></div>
+        </header>
+        <section id="destaque-pessoal" class="highlight-card" hidden></section>
+        <div class="dashboard-grid">
+          <section class="area-card session-card" id="card-eventos">
+            <h2 class="session-kicker">Próxima sessão</h2>
+            <div id="proximo-evento"></div>
           </section>
-          <section class="area-card">
-            <h2>Aniversários próximos</h2>
-            <p id="proximos-niver">Nenhuma data autorizada para os próximos dias.</p>
-          </section>
-          <section class="area-card">
-            <h2>Iniciações</h2>
-            <p id="proximas-iniciacoes">Nenhum aniversário de iniciação cadastrado.</p>
-          </section>
-          <section class="area-card">
+          <section class="area-card" id="card-comunicados">
             <h2>Comunicados</h2>
-            <div id="comunicados"><p>Não há comunicados no momento.</p></div>
+            <div id="comunicados"></div>
+          </section>
+          <section class="area-card">
+            <h2>Próximos aniversários</h2>
+            <div id="proximos-niver"></div>
+          </section>
+          <section class="area-card">
+            <h2>Próximas datas maçônicas</h2>
+            <div id="proximas-iniciacoes"></div>
           </section>
         </div>
       </div>

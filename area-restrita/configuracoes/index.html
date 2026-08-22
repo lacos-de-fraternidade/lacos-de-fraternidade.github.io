@@ -12,21 +12,51 @@
   </head>
   <body class="area-body">
     <div id="shell"></div>
-    <main class="area-main"><div class="area-wrap"><section class="area-card">
-      <h1>Configurações</h1>
-      <p>Os limites de tentativas, retenção de logs e validade do convite ficam na tabela <code>configuracoes_autenticacao</code>, editável no SQL Editor.</p>
-      <p><strong>MFA pendente:</strong> secretário e administrador ainda não têm MFA obrigatório. Não tratar esta tela como proteção MFA.</p>
-      <ul>
-        <li>Ativar MFA TOTP no Supabase Auth para perfis privilegiados</li>
-        <li>Exigir AAL2 nas ações críticas das Edge Functions</li>
-        <li>CAPTCHA após falhas repetidas de login (Turnstile/hCaptcha)</li>
-      </ul>
-    </section></div></main>
-    <script type="module">
-      import { requireMember } from "../js/guard.js";
-      import { bootPage } from "../js/page.js";
-      await requireMember({ admin: true });
-      await bootPage("Configurações", async () => {});
-    </script>
+    <main class="area-main">
+      <div class="area-wrap">
+        <header class="page-hero">
+          <p class="eyebrow">Administração</p>
+          <h1>Configurações</h1>
+          <p class="muted">Visão operacional da Área dos Irmãos. Itens pendentes não possuem ação até estarem prontos.</p>
+          <div class="gold-rule" aria-hidden="true"></div>
+        </header>
+        <div class="settings-grid">
+          <section class="area-card settings-card">
+            <h2>Segurança de acesso</h2>
+            <p>MFA administrativo</p>
+            <p class="settings-value">Pendente</p>
+          </section>
+          <section class="area-card settings-card">
+            <h2>Proteção contra tentativas</h2>
+            <p>Bloqueio após falhas repetidas de login e recuperação.</p>
+            <p class="settings-value">Ativa</p>
+          </section>
+          <section class="area-card settings-card">
+            <h2>CAPTCHA</h2>
+            <p>Desafio adicional após tentativas repetidas.</p>
+            <p class="settings-value">Não configurado</p>
+          </section>
+          <section class="area-card settings-card">
+            <h2>Convites</h2>
+            <p>Validade padrão do convite institucional.</p>
+            <p class="settings-value" id="convite-validade">24 horas</p>
+          </section>
+          <section class="area-card settings-card">
+            <h2>Logs</h2>
+            <p>Retenção dos registros de auditoria.</p>
+            <p class="settings-value" id="logs-retencao">90 dias</p>
+          </section>
+          <section class="area-card settings-card">
+            <h2>Sessões</h2>
+            <p>Gerar automaticamente a 2ª e a 4ª quarta-feira, às 19h30.</p>
+            <p class="settings-value">2ª e 4ª quarta-feira · 19h30</p>
+            <div class="form-actions">
+              <button type="button" class="button button-primary" id="gerar-sessoes">Gerar sessões dos próximos 12 meses</button>
+            </div>
+          </section>
+        </div>
+      </div>
+    </main>
+    <script type="module" src="./configuracoes.js"></script>
   </body>
 </html>

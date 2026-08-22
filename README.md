@@ -2,7 +2,9 @@
 
 Site institucional estático no GitHub Pages, com o Cadastro do candidato processado pelo Supabase.
 
-Fluxo: `index.html` → `interesse.html` → backend → `confirmacao.html`.
+Fluxo público: `index.html` → `interesse.html` → backend → `confirmacao.html`.
+
+A Área dos Irmãos (`/area-restrita/`) autentica por CIM e senha. Guia operacional: [docs/area-dos-irmaos.md](docs/area-dos-irmaos.md).
 
 ## Executar localmente
 
@@ -10,7 +12,13 @@ Fluxo: `index.html` → `interesse.html` → backend → `confirmacao.html`.
 python -m http.server 8080
 ```
 
-Acesse `http://localhost:8080`.
+Acesse `http://localhost:8080` e `http://localhost:8080/area-restrita/login/`.
+
+## Testes
+
+```bash
+node --test
+```
 
 ## Supabase
 

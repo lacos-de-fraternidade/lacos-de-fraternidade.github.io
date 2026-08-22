@@ -1,13 +1,11 @@
 import { bootPage } from "../js/page.js";
 import { invokeFunction } from "../js/client.js";
-import { requireMember } from "../js/guard.js";
+import { displayPersonName } from "../js/vinculo.js";
+import { el } from "../js/ui-state.js";
 
-const ctx = await requireMember({ staff: true });
-if (!ctx) throw new Error("redirect");
-
-await bootPage("Gerenciar membros", async () => {
+await bootPage("Gerenciar membros", async (ctx) => {
   const status = document.querySelector("#status");
-  const body = document.querySelector("#membros");
+  const list = document.querySelector("#membros");
 
   async function staffAction(payload) {
     return invokeFunction("gerenciar-irmao", payload, ctx.session.access_token);
@@ -15,36 +13,36 @@ await bootPage("Gerenciar membros", async () => {
 
   async function refresh() {
     const { data } = await staffAction({ acao: "listar" });
-    body.replaceChildren();
+    list.replaceChildren();
     (data.membros || []).forEach((membro) => {
-      const tr = document.createElement("tr");
-      const cells = [
-        membro.nome,
-        membro.cim_mascarada,
-        membro.email,
-        membro.perfil,
-        membro.ativo ? "Ativo" : "Inativo",
-        membro.conta_ativada ? "Sim" : "Não",
-        membro.convite_enviado_em ? new Date(membro.convite_enviado_em).toLocaleDateString("pt-BR") : "—",
-        membro.ultimo_acesso_em ? new Date(membro.ultimo_acesso_em).toLocaleDateString("pt-BR") : "—",
-      ];
-      cells.forEach((value) => {
-        const td = document.createElement("td");
-        td.textContent = value;
-        tr.append(td);
-      });
-      const actions = document.createElement("td");
-      const buttons = [
-        ["Convite", { acao: "enviar_convite", id: membro.id }, true],
+      const card = el("article", "member-card");
+      const body = el("div");
+      const situacao = `${membro.ativo ? "Ativo" : "Inativo"} · ${membro.conta_ativada ? "conta ativada" : "conta pendente"}`;
+      body.append(
+        el("strong", "person-name", displayPersonName(membro.nome)),
+        el("p", "muted", `${labelPerfil(membro.perfil)} · CIM ${membro.cim_mascarada}`),
+        el("p", "muted", situacao),
+        el("p", "muted", `Último acesso: ${membro.ultimo_acesso_em ? new Date(membro.ultimo_acesso_em).toLocaleDateString("pt-BR") : "—"}`),
+      );
+      const menu = el("div", "actions-menu");
+      const toggle = document.createElement("button");
+      toggle.type = "button";
+      toggle.className = "button button-secondary table-action";
+      toggle.setAttribute("aria-haspopup", "true");
+      toggle.textContent = "•••";
+      const panel = el("div", "nav-dropdown-menu");
+      panel.hidden = true;
+      const actions = [
+        ["Enviar convite", { acao: "enviar_convite", id: membro.id }, true],
         [membro.ativo ? "Desativar" : "Ativar", { acao: membro.ativo ? "desativar" : "ativar", id: membro.id }, true],
         ["Desbloquear", { acao: "desbloquear", id: membro.id }, false],
-        ["Revogar", { acao: "revogar", id: membro.id }, true],
       ];
-      buttons.forEach(([label, payload, confirm]) => {
-        if (label === "Revogar" && ctx.profile.perfil !== "administrador") return;
+      if (ctx.profile.perfil === "administrador") {
+        actions.push(["Revogar acesso", { acao: "revogar", id: membro.id }, true]);
+      }
+      actions.forEach(([label, payload, confirm]) => {
         const button = document.createElement("button");
         button.type = "button";
-        button.className = "button button-secondary";
         button.textContent = label;
         button.addEventListener("click", async () => {
           if (confirm && !window.confirm(`Confirmar ação: ${label}?`)) return;
@@ -53,10 +51,15 @@ await bootPage("Gerenciar membros", async () => {
           status.classList.toggle("is-ok", Boolean(result.data?.ok));
           await refresh();
         });
-        actions.append(button);
+        panel.append(button);
       });
-      tr.append(actions);
-      body.append(tr);
+      toggle.addEventListener("click", (event) => {
+        event.stopPropagation();
+        panel.hidden = !panel.hidden;
+      });
+      menu.append(toggle, panel);
+      card.append(body, menu);
+      list.append(card);
     });
   }
 
@@ -76,4 +79,8 @@ await bootPage("Gerenciar membros", async () => {
   });
 
   await refresh();
-});
+}, { staff: true });
+
+function labelPerfil(perfil) {
+  return { irmao: "Irmão", secretario: "Secretário", administrador: "Administrador" }[perfil] || perfil;
+}

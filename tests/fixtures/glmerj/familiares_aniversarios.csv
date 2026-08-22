@@ -1,0 +1,4 @@
+mes,ordem,nome,parentesco,irmao_relacionado,dia
+Abril,1,FILHO ALFA,Filhos,IRMAO ALFA,2
+Julho,1,GENITOR ALFA,Genitor(a),IRMAO ALFA,3
+Janeiro,1,FILHO SOLTO,Filhos,IRMAO INEXISTENTE,4

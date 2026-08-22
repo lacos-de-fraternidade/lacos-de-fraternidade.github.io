@@ -6,27 +6,45 @@
     <meta name="referrer" content="strict-origin-when-cross-origin" />
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self' https://cdn.jsdelivr.net; connect-src 'self' https://klxcwkclydirdxomkbtv.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'" />
     <meta name="robots" content="noindex, nofollow" />
-    <title>Calendário | Área dos Irmãos</title>
+    <title>Agenda da Loja | Área dos Irmãos</title>
     <link rel="stylesheet" href="../css/area.css" />
     <script src="../../config.js"></script>
   </head>
-  <body class="area-body">
+  <body class="area-body birthdays-page calendar-page">
     <div id="shell"></div>
-    <main class="area-main"><div class="area-wrap"><section class="area-card"><h1>Calendário interno</h1><div id="lista"></div></section></div></main>
-    <script type="module">
-      import { bootPage } from "../js/page.js";
-      await bootPage("Calendário", async ({ supabase }) => {
-        const { data } = await supabase.from("eventos_internos").select("titulo, descricao, inicia_em").eq("publicado", true).order("inicia_em");
-        const lista = document.querySelector("#lista");
-        if (!data?.length) { lista.textContent = "Nenhum evento interno publicado."; return; }
-        const ul = document.createElement("ul");
-        data.forEach((item) => {
-          const li = document.createElement("li");
-          li.textContent = `${new Date(item.inicia_em).toLocaleString("pt-BR")} — ${item.titulo}`;
-          ul.append(li);
-        });
-        lista.append(ul);
-      });
-    </script>
+    <main class="area-main">
+      <div class="area-wrap">
+        <header class="page-hero">
+          <p class="eyebrow">Calendário</p>
+          <h1>Agenda da Loja</h1>
+          <p class="page-lede">Sessões, eventos e datas comemorativas reunidos em um único calendário.</p>
+          <div class="gold-rule" aria-hidden="true"></div>
+        </header>
+        <div class="calendar-period">
+          <nav class="month-nav" aria-label="Navegação de mês">
+            <button type="button" id="mes-anterior" class="month-nav-btn" aria-label="Mês anterior">‹</button>
+            <h2 id="mes-atual">Agosto de 2026</h2>
+            <button type="button" id="mes-seguinte" class="month-nav-btn" aria-label="Próximo mês">›</button>
+          </nav>
+          <p class="calendar-next-summary" id="contexto-mes"></p>
+        </div>
+        <section class="area-card" aria-live="polite">
+          <div class="calendar-toolbar">
+            <div class="calendar-summary" id="resumo-mes"></div>
+            <div class="calendar-filter" id="filtro-calendario">
+              <label class="calendar-filter-label" id="filtro-rotulo" for="filtro-toggle">Filtro</label>
+              <div class="calendar-filter-control">
+                <button type="button" id="filtro-toggle" class="calendar-filter-trigger" aria-expanded="false" aria-haspopup="true" aria-labelledby="filtro-rotulo">Todos os registros</button>
+                <div id="filtro-painel" class="calendar-filter-panel" hidden></div>
+              </div>
+            </div>
+          </div>
+          <div id="calendario" class="calendar-grid-wrap"></div>
+          <div id="agenda-lista" class="calendar-agenda"></div>
+          <div id="dia-detalhe" class="day-agenda"></div>
+        </section>
+      </div>
+    </main>
+    <script type="module" src="./calendario.js"></script>
   </body>
 </html>

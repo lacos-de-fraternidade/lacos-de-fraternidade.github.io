@@ -1,0 +1,307 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self' https://cdn.jsdelivr.net; connect-src 'self' https://klxcwkclydirdxomkbtv.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>Gestão de Irmãos | Área dos Irmãos</title>
+    <link rel="stylesheet" href="../css/area.css" />
+    <script src="../../config.js"></script>
+  </head>
+  <body class="area-body gestao-page">
+    <div id="shell"></div>
+    <main class="area-main">
+      <div class="area-wrap">
+        <header class="page-hero">
+          <p class="eyebrow">Administração</p>
+          <h1>Gestão de Irmãos</h1>
+          <p class="muted">Cadastro institucional, acesso, situação maçônica, familiares e eventos da Loja.</p>
+          <div class="gold-rule" aria-hidden="true"></div>
+        </header>
+        <div class="tab-bar" id="tabs" role="tablist">
+          <button type="button" class="tab-btn" data-tab="irmaos" aria-selected="true">Irmãos</button>
+          <button type="button" class="tab-btn" data-tab="familiares">Familiares</button>
+          <button type="button" class="tab-btn" data-tab="casamentos">Casamentos</button>
+          <button type="button" class="tab-btn" data-tab="eventos">Eventos</button>
+          <button type="button" class="tab-btn" data-tab="comunicados">Comunicados</button>
+          <div class="nav-dropdown admin-only" data-dropdown>
+            <button type="button" class="tab-btn nav-dropdown-toggle" aria-expanded="false">Mais</button>
+            <div class="nav-dropdown-menu" hidden>
+              <button type="button" data-tab="ferramentas">Ferramentas de migração</button>
+            </div>
+          </div>
+        </div>
+
+        <section data-panel="irmaos" class="irmaos-panel">
+          <div class="irmaos-toolbar members-toolbar">
+            <div class="field irmaos-search members-toolbar__search">
+              <label for="busca" class="sr-only">Buscar por nome, CIM ou e-mail</label>
+              <input id="busca" type="search" placeholder="Buscar por nome, CIM ou e-mail..." autocomplete="off" />
+            </div>
+            <div class="field members-toolbar__filter">
+              <label for="filtro-situacao">Situação</label>
+              <select id="filtro-situacao">
+                <option value="">Todas as situações</option>
+                <option value="ativo">Ativo</option>
+                <option value="quiet_placet">Em quiet placet</option>
+                <option value="transferencia">Em transferência</option>
+                <option value="afastado">Afastado</option>
+                <option value="inativo">Inativo</option>
+                <option value="desligado">Desligado</option>
+                <option value="falecido">Falecido</option>
+              </select>
+            </div>
+            <div class="field members-toolbar__filter">
+              <label for="filtro-perfil">Perfil</label>
+              <select id="filtro-perfil">
+                <option value="">Todos os perfis</option>
+                <option value="irmao">Irmão</option>
+                <option value="secretario">Secretaria</option>
+                <option value="administrador">Administrador</option>
+              </select>
+            </div>
+            <div class="field members-toolbar__filter">
+              <label for="filtro-acesso">Acesso</label>
+              <select id="filtro-acesso">
+                <option value="">Todos os acessos</option>
+                <option value="ativada">Conta ativa</option>
+                <option value="pendente">Convite enviado</option>
+                <option value="expirado">Convite expirado</option>
+                <option value="sem_acesso">Sem acesso</option>
+                <option value="bloqueado">Conta bloqueada</option>
+                <option value="revogado">Acesso revogado</option>
+              </select>
+            </div>
+            <button type="button" class="button button-primary irmaos-new members-toolbar__new-button" id="novo-irmao">+ Novo Irmão</button>
+          </div>
+          <div class="irmaos-summary members-results-summary">
+            <p id="irmaos-count" aria-live="polite">Carregando Irmãos…</p>
+            <button type="button" class="irmaos-clear" id="limpar-filtros-irmaos" hidden>Limpar filtros</button>
+          </div>
+          <div id="lista-irmaos" class="irmaos-list" aria-live="polite" aria-busy="true">
+            <article class="irmaos-row is-skeleton" aria-hidden="true"><span class="skeleton"></span><span class="skeleton"></span><span class="skeleton"></span><span class="skeleton"></span></article>
+            <article class="irmaos-row is-skeleton" aria-hidden="true"><span class="skeleton"></span><span class="skeleton"></span><span class="skeleton"></span><span class="skeleton"></span></article>
+            <article class="irmaos-row is-skeleton" aria-hidden="true"><span class="skeleton"></span><span class="skeleton"></span><span class="skeleton"></span><span class="skeleton"></span></article>
+            <article class="irmaos-row is-skeleton" aria-hidden="true"><span class="skeleton"></span><span class="skeleton"></span><span class="skeleton"></span><span class="skeleton"></span></article>
+            <article class="irmaos-row is-skeleton" aria-hidden="true"><span class="skeleton"></span><span class="skeleton"></span><span class="skeleton"></span><span class="skeleton"></span></article>
+            <article class="irmaos-row is-skeleton" aria-hidden="true"><span class="skeleton"></span><span class="skeleton"></span><span class="skeleton"></span><span class="skeleton"></span></article>
+            <article class="irmaos-row is-skeleton" aria-hidden="true"><span class="skeleton"></span><span class="skeleton"></span><span class="skeleton"></span><span class="skeleton"></span></article>
+          </div>
+        </section>
+
+        <section class="area-card" data-panel="familiares" hidden>
+          <h2>Familiares</h2>
+          <form id="familiar-form" class="form-grid form-grid-2">
+            <input type="hidden" id="familiar-id" />
+            <div class="field combo"><label for="familiar-irmao">Irmão</label><input id="familiar-irmao" required /><div id="familiar-irmao-list" hidden></div></div>
+            <div class="field"><label for="familiar-nome">Nome</label><input id="familiar-nome" required /></div>
+            <div class="field"><label for="familiar-parentesco">Parentesco</label>
+              <select id="familiar-parentesco">
+                <option value="esposa">Esposa (cunhada)</option>
+                <option value="companheira">Companheira (cunhada)</option>
+                <option value="filho">Filho</option>
+                <option value="filha">Filha</option>
+                <option value="pai">Pai</option>
+                <option value="mae">Mãe</option>
+                <option value="outro">Outro</option>
+              </select>
+            </div>
+            <div class="field"><label for="familiar-dia">Dia</label><input id="familiar-dia" inputmode="numeric" min="1" max="31" /></div>
+            <div class="field"><label for="familiar-mes">Mês</label><input id="familiar-mes" inputmode="numeric" min="1" max="12" /></div>
+            <label class="check form-check-inline"><input id="familiar-exibir" type="checkbox" /> Autorizar exibição</label>
+            <div class="form-actions">
+              <button class="button button-secondary" type="reset" id="familiar-descartar">Descartar</button>
+              <button class="button button-primary" type="submit">Salvar familiar</button>
+            </div>
+          </form>
+          <h3 class="list-heading">Familiares cadastrados</h3>
+          <div id="familiares-lista" class="record-list"></div>
+        </section>
+
+        <section class="area-card" data-panel="casamentos" hidden>
+          <h2>Casamentos</h2>
+          <form id="casamento-form" class="form-grid form-grid-2">
+            <div class="field combo"><label for="casamento-irmao">Irmão</label><input id="casamento-irmao" required /><div id="casamento-irmao-list" hidden></div></div>
+            <div class="field combo"><label for="casamento-conjuge">Cunhada</label><input id="casamento-conjuge" required /><div id="casamento-conjuge-list" hidden></div></div>
+            <p class="muted" id="casamento-hint"></p>
+            <div class="field"><label for="casamento-data">Data do casamento</label><input id="casamento-data" placeholder="dd/mm/aaaa" /></div>
+            <label class="check form-check-inline"><input id="casamento-exibir" type="checkbox" /> Autorizar exibição</label>
+            <div class="form-actions">
+              <button class="button button-secondary" type="reset" id="casamento-descartar">Descartar</button>
+              <button class="button button-primary" type="submit">Salvar casamento</button>
+            </div>
+          </form>
+          <h3 class="list-heading">Casamentos cadastrados</h3>
+          <div id="casamentos-lista" class="record-list"></div>
+        </section>
+
+        <section class="area-card" data-panel="eventos" hidden>
+          <h2>Eventos internos</h2>
+          <form id="evento-form" class="form-grid form-grid-2">
+            <input type="hidden" id="evento-id" />
+            <div class="field"><label for="evento-titulo">Título</label><input id="evento-titulo" required /></div>
+            <div class="field"><label for="evento-tipo">Tipo</label>
+              <select id="evento-tipo">
+                <option value="sessao_ordinaria">Sessão ordinária</option>
+                <option value="sessao_administrativa">Sessão administrativa</option>
+                <option value="sessao_magna">Sessão magna</option>
+                <option value="reuniao">Reunião</option>
+                <option value="comunicado">Comunicado</option>
+                <option value="outro">Outro</option>
+              </select>
+            </div>
+            <div class="field"><label for="evento-data">Data</label><input id="evento-data" placeholder="dd/mm/aaaa" required /></div>
+            <div class="field"><label for="evento-hora">Horário</label><input id="evento-hora" placeholder="hh:mm" required /></div>
+            <div class="field field-span"><label for="evento-descricao">Descrição</label><textarea id="evento-descricao" rows="3"></textarea></div>
+            <label class="check"><input id="evento-presenca" type="checkbox" /> Presença obrigatória</label>
+            <label class="check"><input id="evento-destaque" type="checkbox" /> Destacar no dashboard</label>
+            <div class="form-actions">
+              <button class="button button-secondary" type="button" id="evento-descartar">Descartar</button>
+              <button class="button button-primary" type="submit">Salvar evento</button>
+            </div>
+          </form>
+          <h3 class="list-heading">Agenda da Loja</h3>
+          <div id="eventos-lista" class="record-list"></div>
+        </section>
+
+        <section class="area-card" data-panel="comunicados" hidden>
+          <h2>Comunicados</h2>
+          <form id="comunicado-form" class="form-grid form-grid-2">
+            <input type="hidden" id="comunicado-id" />
+            <div class="field"><label for="comunicado-titulo">Título</label><input id="comunicado-titulo" required /></div>
+            <div class="field"><label for="comunicado-tipo">Tipo</label>
+              <select id="comunicado-tipo">
+                <option value="informativo">Informativo</option>
+                <option value="financeiro">Financeiro</option>
+                <option value="urgente">Urgente</option>
+                <option value="sessao">Sessão</option>
+                <option value="administrativo">Administrativo</option>
+              </select>
+            </div>
+            <div class="field field-span"><label for="comunicado-corpo">Mensagem</label><textarea id="comunicado-corpo" rows="4" required></textarea></div>
+            <div class="field"><label for="comunicado-inicio-data">Início da exibição</label><input id="comunicado-inicio-data" placeholder="dd/mm/aaaa" /></div>
+            <div class="field"><label for="comunicado-inicio-hora">Horário inicial</label><input id="comunicado-inicio-hora" placeholder="hh:mm" /></div>
+            <div class="field"><label for="comunicado-fim-data">Fim da exibição</label><input id="comunicado-fim-data" placeholder="dd/mm/aaaa" /></div>
+            <div class="field"><label for="comunicado-fim-hora">Horário final</label><input id="comunicado-fim-hora" placeholder="hh:mm" /></div>
+            <label class="check"><input id="comunicado-destaque" type="checkbox" /> Destaque</label>
+            <label class="check"><input id="comunicado-presenca" type="checkbox" /> Presença obrigatória</label>
+            <div class="form-actions">
+              <button class="button button-secondary" type="button" id="comunicado-descartar">Descartar</button>
+              <button class="button button-primary" type="submit" id="comunicado-salvar">Publicar comunicado</button>
+            </div>
+          </form>
+          <h3 class="list-heading">Comunicados publicados</h3>
+          <div id="comunicados-lista" class="record-list"></div>
+        </section>
+
+        <section class="area-card admin-only" data-panel="ferramentas" hidden>
+          <h2>Ferramentas de migração</h2>
+          <p class="warning-note">Use somente para importação de dados legados. Esta função não faz parte da rotina da Secretaria.</p>
+          <textarea id="csv" rows="8" placeholder="cim;tipo;mes;dia;nome"></textarea>
+          <div class="form-actions">
+            <button type="button" class="button button-secondary" id="importar">Importar tabela antiga</button>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <dialog id="dialog-novo" class="modal-dialog irmaos-dialog member-modal" aria-labelledby="novo-titulo" aria-modal="true">
+      <form id="form-novo" class="member-modal__dialog" novalidate>
+        <input type="hidden" id="novo-id" />
+        <header class="modal-head member-modal__header">
+          <div>
+            <h2 id="novo-titulo">Novo Irmão</h2>
+            <p class="muted">Cadastre os dados institucionais do Irmão. A liberação do acesso à Área dos Irmãos será realizada posteriormente pela Secretaria.</p>
+          </div>
+          <button type="button" class="icon-button" data-close aria-label="Fechar">×</button>
+        </header>
+        <div class="modal-body member-modal__body">
+          <fieldset class="form-section">
+            <legend>Dados pessoais</legend>
+            <div class="form-grid member-modal__fields">
+              <div class="field">
+                <label for="novo-nome">Nome completo</label>
+                <input id="novo-nome" autocomplete="name" aria-describedby="erro-novo-nome" />
+                <p class="field-error" id="erro-novo-nome" hidden></p>
+              </div>
+              <div class="field">
+                <label for="novo-nascimento">Data de nascimento</label>
+                <input id="novo-nascimento" inputmode="numeric" placeholder="dd/mm/aaaa" autocomplete="off" aria-describedby="erro-novo-nascimento" />
+                <p class="field-error" id="erro-novo-nascimento" hidden></p>
+              </div>
+            </div>
+          </fieldset>
+          <fieldset class="form-section">
+            <legend>Dados maçônicos</legend>
+            <div class="form-grid member-modal__fields">
+              <div class="field">
+                <label for="novo-iniciacao">Data de iniciação</label>
+                <input id="novo-iniciacao" inputmode="numeric" placeholder="dd/mm/aaaa" autocomplete="off" aria-describedby="erro-novo-iniciacao" />
+                <p class="field-error" id="erro-novo-iniciacao" hidden></p>
+              </div>
+              <div class="field">
+                <label for="novo-situacao">Situação maçônica</label>
+                <select id="novo-situacao">
+                  <option value="ativo">Ativo</option>
+                  <option value="quiet_placet">Em quiet placet</option>
+                  <option value="transferencia">Em transferência</option>
+                  <option value="afastado">Afastado</option>
+                  <option value="inativo">Inativo</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="novo-loja">Loja de iniciação</label>
+                <input id="novo-loja" name="loja_iniciacao" value="ARLS Laços de Fraternidade 357 nº 251" />
+              </div>
+            </div>
+          </fieldset>
+          <fieldset class="form-section" id="secao-acesso">
+            <legend>Acesso à Área dos Irmãos</legend>
+            <div class="form-grid member-modal__fields">
+              <div class="field">
+                <label for="novo-cim">CIM</label>
+                <input id="novo-cim" inputmode="numeric" autocomplete="off" aria-describedby="erro-novo-cim" />
+                <p class="field-error" id="erro-novo-cim" hidden></p>
+              </div>
+              <div class="field">
+                <label for="novo-email">E-mail</label>
+                <input id="novo-email" type="email" autocomplete="off" aria-describedby="erro-novo-email" />
+                <p class="field-error" id="erro-novo-email" hidden></p>
+              </div>
+              <div class="field">
+                <label for="novo-perfil">Perfil de acesso</label>
+                <select id="novo-perfil" aria-describedby="erro-novo-perfil">
+                  <option value="irmao" selected>Irmão</option>
+                </select>
+                <p class="field-error" id="erro-novo-perfil" hidden></p>
+              </div>
+            </div>
+          </fieldset>
+        </div>
+        <footer class="modal-foot member-modal__footer">
+          <button class="button button-secondary" type="button" data-close>Cancelar</button>
+          <button class="button button-primary" type="submit" id="novo-salvar">Salvar Irmão</button>
+        </footer>
+      </form>
+    </dialog>
+    <dialog id="dialog-admin" class="modal-dialog member-modal" role="dialog" aria-labelledby="admin-titulo" aria-modal="true">
+      <div class="member-modal__dialog">
+        <header class="modal-head member-modal__header">
+          <div>
+            <h2 id="admin-titulo">Movimentação</h2>
+            <p class="muted" id="admin-intro"></p>
+          </div>
+          <button type="button" class="icon-button" data-close aria-label="Fechar">×</button>
+        </header>
+        <div class="modal-body member-modal__body" id="admin-body"></div>
+        <footer class="modal-foot member-modal__footer" id="admin-foot">
+          <button class="button button-secondary" type="button" data-close>Cancelar</button>
+        </footer>
+      </div>
+    </dialog>
+    <div id="drawer-root"></div>
+    <script type="module" src="./gestao.js"></script>
+  </body>
+</html>

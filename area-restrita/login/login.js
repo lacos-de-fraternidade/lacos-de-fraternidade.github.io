@@ -1,16 +1,11 @@
 import { areaClient, invokeFunction } from "../js/client.js";
 import { isValidCim, normalizeCim } from "../js/cim.js";
+import { bindPasswordToggle } from "../js/password-toggle.js";
 
 const form = document.querySelector("#login-form");
 const status = document.querySelector("#status");
-const toggle = document.querySelector("#toggle-senha");
 const senha = document.querySelector("#senha");
-
-toggle.addEventListener("click", () => {
-  const hidden = senha.type === "password";
-  senha.type = hidden ? "text" : "password";
-  toggle.textContent = hidden ? "Ocultar" : "Mostrar";
-});
+bindPasswordToggle(senha, document.querySelector("#toggle-senha"));
 
 form.addEventListener("submit", async (event) => {
   event.preventDefault();

@@ -3,3 +3,10 @@
 supabase/.temp/
 supabase/.branches/
 assets/*.pdf
+data/glmerj/**
+!data/glmerj/.gitignore
+glmerj_extracao/
+import_staging.sql
+*.xlsx
+supabase/migrations/202608220002_vincular_cims_irmaos.sql
+supabase/scripts/auditar-vinculo-cims.sql

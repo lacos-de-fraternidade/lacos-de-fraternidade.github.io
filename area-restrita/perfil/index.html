@@ -10,24 +10,35 @@
     <link rel="stylesheet" href="../css/area.css" />
     <script src="../../config.js"></script>
   </head>
-  <body class="area-body">
+  <body class="area-body profile-page">
     <div id="shell"></div>
     <main class="area-main">
       <div class="area-wrap">
-        <section class="area-card">
-          <h1>Meu perfil</h1>
-          <p id="nome"></p>
-          <p id="perfil"></p>
-          <p>Para alterar CIM, e-mail ou nome, solicite à Secretaria.</p>
-        </section>
+        <header class="profile-hero">
+          <div id="perfil-identidade" class="profile-identity"></div>
+          <aside id="perfil-boas-vindas" class="profile-welcome" aria-label="Resumo do perfil"></aside>
+        </header>
+        <div class="profile-body">
+          <div class="profile-main">
+            <div class="profile-cards">
+              <section class="area-card profile-card" id="card-conta" aria-labelledby="titulo-conta"></section>
+              <section class="area-card profile-card" id="card-institucional" aria-labelledby="titulo-institucional"></section>
+              <section class="area-card profile-card" id="card-datas" aria-labelledby="titulo-datas"></section>
+              <section class="area-card profile-card" id="card-seguranca" aria-labelledby="titulo-seguranca"></section>
+            </div>
+            <div class="profile-highlights">
+              <section class="area-card profile-highlight" id="card-proxima-sessao"></section>
+              <section class="area-card profile-highlight" id="card-aniversario"></section>
+            </div>
+            <p class="muted profile-footnote">Para alterar dados institucionais, procure a Secretaria.</p>
+          </div>
+          <aside class="profile-aside">
+            <section class="area-card profile-stats" id="perfil-estatisticas" aria-label="Estatísticas"></section>
+            <section class="area-card profile-timeline" id="perfil-timeline" aria-labelledby="titulo-caminhada"></section>
+          </aside>
+        </div>
       </div>
     </main>
-    <script type="module">
-      import { bootPage } from "../js/page.js";
-      await bootPage("Meu perfil", async ({ profile }) => {
-        document.querySelector("#nome").textContent = profile.nome;
-        document.querySelector("#perfil").textContent = `Perfil: ${profile.perfil}`;
-      });
-    </script>
+    <script type="module" src="./perfil.js"></script>
   </body>
 </html>

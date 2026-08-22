@@ -10,23 +10,49 @@
     <link rel="stylesheet" href="../css/area.css" />
     <script src="../../config.js"></script>
   </head>
-  <body class="area-body">
+  <body class="area-body birthdays-page">
     <div id="shell"></div>
-    <main class="area-main"><div class="area-wrap"><section class="area-card"><h1>Aniversários</h1><div id="lista"></div></section></div></main>
-    <script type="module">
-      import { bootPage } from "../js/page.js";
-      await bootPage("Aniversários", async ({ supabase }) => {
-        const { data } = await supabase.from("celebracoes").select("nome_exibicao, mes, dia").eq("tipo", "aniversario").eq("autorizado", true).order("mes").order("dia");
-        const lista = document.querySelector("#lista");
-        if (!data?.length) { lista.textContent = "Nenhum aniversário autorizado no momento."; return; }
-        const ul = document.createElement("ul");
-        data.forEach((item) => {
-          const li = document.createElement("li");
-          li.textContent = `${String(item.dia).padStart(2,"0")}/${String(item.mes).padStart(2,"0")} — ${item.nome_exibicao}`;
-          ul.append(li);
-        });
-        lista.append(ul);
-      });
-    </script>
+    <main class="area-main">
+      <div class="area-wrap">
+        <header class="page-hero">
+          <p class="eyebrow">Aniversários</p>
+          <h1>Aniversários e celebrações</h1>
+          <p class="page-lede">Datas dos Irmãos e familiares autorizados.</p>
+          <div class="gold-rule" aria-hidden="true"></div>
+        </header>
+        <nav class="month-nav" aria-label="Navegação de mês">
+          <button type="button" id="mes-anterior" class="month-nav-btn" aria-label="Mês anterior">‹</button>
+          <h2 id="mes-atual">Agosto de 2026</h2>
+          <button type="button" id="mes-seguinte" class="month-nav-btn" aria-label="Próximo mês">›</button>
+        </nav>
+        <form id="filtros" class="filter-bar" aria-label="Filtros de aniversários">
+          <div class="field">
+            <label for="filtro-categoria">Mostrar</label>
+            <select id="filtro-categoria">
+              <option value="todos">Todos</option>
+              <option value="irmao">Irmãos</option>
+              <option value="cunhada">Cunhadas</option>
+              <option value="familiar">Familiares</option>
+              <option value="casamento">Casamentos</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="filtro-nome">Buscar por nome</label>
+            <div class="search-control">
+              <span class="search-icon" aria-hidden="true"></span>
+              <input id="filtro-nome" type="search" autocomplete="off" placeholder="Buscar por nome" />
+              <button type="button" class="search-clear" id="limpar-busca" hidden aria-label="Limpar busca">×</button>
+            </div>
+          </div>
+        </form>
+        <p class="list-meta" id="lista-meta" hidden></p>
+        <section class="area-card" aria-live="polite">
+          <div class="month-summary" id="resumo-mes"></div>
+          <div id="lista"></div>
+          <div id="passados"></div>
+        </section>
+      </div>
+    </main>
+    <script type="module" src="./aniversarios.js"></script>
   </body>
 </html>

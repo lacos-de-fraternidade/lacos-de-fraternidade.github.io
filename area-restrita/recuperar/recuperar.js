@@ -7,7 +7,7 @@ const message = "Caso exista uma conta ativa vinculada à CIM informada, enviare
 
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
-  await invokeFunction("recuperar-senha-cim", { cim: normalizeCim(form.cim.value) });
+  await invokeFunction("recuperar-senha-cim", { cim: normalizeCim(form.cim.value), site_origin: location.origin });
   status.classList.add("is-ok");
   status.textContent = message;
 });

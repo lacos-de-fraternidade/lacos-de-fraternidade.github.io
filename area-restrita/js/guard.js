@@ -2,7 +2,8 @@ import { areaClient, invokeFunction } from "./client.js";
 
 const LOGIN_URL = "/area-restrita/login/";
 const HOME_URL = "/area-restrita/";
-const ADMIN_URL = "/area-restrita/administracao/";
+const ADMIN_URL = "/area-restrita/";
+const PUBLIC_ABOUT_URL = "/sobre.html";
 
 export async function requireMember(options = {}) {
   const supabase = areaClient();
@@ -13,7 +14,7 @@ export async function requireMember(options = {}) {
   }
   const { data: profile } = await supabase
     .from("irmaos_autorizados")
-    .select("id, nome, perfil, ativo, conta_ativada, email, cim")
+    .select("id, nome, perfil, ativo, conta_ativada, email, cim, irmao_id, ultimo_acesso_em")
     .eq("auth_user_id", session.user.id)
     .maybeSingle();
   if (!profile || profile.ativo !== true || profile.conta_ativada !== true) {
@@ -39,7 +40,7 @@ export async function signOut(supabase, accessToken) {
     // Logging must not block exit.
   }
   await supabase.auth.signOut();
-  window.location.replace(LOGIN_URL);
+  window.location.replace(PUBLIC_ABOUT_URL);
 }
 
 export function firstName(nome) {

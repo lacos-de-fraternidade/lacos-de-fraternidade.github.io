@@ -91,12 +91,20 @@ x-bootstrap-secret: <BOOTSTRAP_INVITE_SECRET>
 
 O uso do endpoint é registrado em `logs_autenticacao` (`bootstrap_utilizado`), sem revelar se um administrador já existe.
 
-## Cadastrar um Irmão
+## Cadastrar um Irmão e liberar o acesso
 
-1. Acesse `/area-restrita/administracao/` como secretário ou administrador.
-2. Informe nome, CIM e e-mail.
-3. Cadastre.
-4. Envie o convite.
+1. Acesse `/area-restrita/gestao/` como secretário ou administrador.
+2. Use **+ Novo Irmão**.
+3. Informe o nome. CIM e e-mail são opcionais até o momento de criar o acesso.
+4. No detalhe do Irmão, abra **Configurar acesso**.
+5. Confira o estado da conta. Sem acesso, o botão principal é **Liberar acesso**.
+6. Confirme o envio. O modal permanece aberto e passa para **Convite enviado**.
+
+O Irmão recebe o e-mail, confirma a CIM, cria a senha e vê a confirmação de sucesso antes de entrar em `/area-restrita/login/`.
+
+Perfis internos: `irmao`, `secretario`, `administrador`. Secretaria pode atribuir Irmão e Secretaria. Só Administrador concede ou remove Administrador. A autorização não fica em `user_metadata`.
+
+As rotas antigas `/area-restrita/administracao/` e `/area-restrita/celebracoes/` redirecionam para a Gestão de Irmãos.
 
 ## Desativação e revogação
 
@@ -144,6 +152,133 @@ Use apenas CIM e senha fictícias. O frontend chama `login-with-cim` e grava a s
 7. Depois do primeiro administrador ativado: remover `BOOTSTRAP_INVITE_SECRET`.
 8. Tabelas `auth_rate_ip` e `configuracoes_autenticacao` têm RLS sem política para `anon`/`authenticated` de propósito: só `service_role` acessa.
 9. GitHub Pages não envia cabeçalhos HTTP customizados; CSP e Referrer-Policy entram via `<meta>`.
+
+## Cadastro institucional e extração GLMERJ
+
+A Área dos Irmãos usa o Supabase como fonte. Não há sincronização automática com a GLMERJ, parser HTML em produção nem armazenamento de sessão externa.
+
+Há dois cadastros distintos, agora ligados por UUID:
+
+```text
+auth.users.id
+    ↓ irmaos_autorizados.auth_user_id
+irmaos_autorizados.id
+    ↓ irmaos_autorizados.irmao_id
+irmaos.id
+```
+
+O sentido inverso (`irmaos.auth_member_id`) permanece e é sincronizado por trigger. O frontend **não** compara nomes e **não** busca CIM publicamente: o guard lê `irmao_id` do próprio perfil (`auth_user_id = auth.uid()`).
+
+| Tabela | Função |
+| --- | --- |
+| `irmaos_autorizados` | Acesso: CIM, e-mail, senha no Auth, perfil, `irmao_id` |
+| `irmaos` / `familiares` / `casamentos` | Celebrações institucionais. Um Irmão pode existir aqui sem login |
+
+A Secretaria pode preencher `irmao_id` uma vez. A carga GLMERJ também tenta casar por **nome normalizado exato** e, em seguida, por **CIM**. Nomes parciais (ex.: “Paulo Henrique Braga” versus “PAULO HENRIQUE BRAGA DA SILVA”) não casam sozinhos.
+
+Casamentos ativos: no máximo um por Irmão e uma cunhada (`esposa`/`companheira`) por vez. Encerrar o vínculo anterior libera novo cadastro.
+
+A Secretaria mantém o cadastro unificado em `/area-restrita/gestao/` (Irmãos, familiares, casamentos, eventos e comunicados). Ferramentas de migração CSV ficam no submenu **Mais**, visível só para administrador. Mutações passam pela Edge Function `gerenciar-irmao` (`service_role`). Membros autenticados e ativos apenas leem o que a RLS permitir. Anônimos não têm GRANT efetivo.
+
+A lista de Irmãos é clicável e o botão **Ver detalhes** abre a ficha. Formulários usam rodapé com largura automática. Feedback de sucesso e erro vai para um toast compartilhado (`showToast`), que some em 4–5 segundos, pode ser fechado e não persiste entre abas nem no `localStorage`. Datas de eventos e comunicados são `dd/mm/aaaa` + `hh:mm`, gravadas em ISO.
+
+O fuso de referência é **America/Sao_Paulo**. Aniversários e iniciações usam dia/mês (e ano só quando existir), sem deslocar o dia por conversão UTC. Sessões ordinárias são geradas às 19h30 nesse fuso.
+
+Aniversários extraídos do HTML trazem só dia e mês. O ano de nascimento **não** é calculado a partir da idade. A idade da extração fica em `idade_informada_na_importacao` (auditoria). Iniciações, casamentos e a fundação da Loja (`2018-08-06`, em `eventos_internos`) usam `date` completa. A interface calcula os anos dinamicamente.
+
+Familiares e casamentos nascem com `autorizado_exibicao = false`. Irmãos: `exibir_aniversario = true`, `exibir_idade = false`, `exibir_iniciacao = true`.
+
+### Carga inicial (dados pessoais fora do Git)
+
+O repositório pode ser público. Nomes e datas pessoais **não** devem ser versionados.
+
+1. Coloque os CSVs extraídos em `data/glmerj/` (pasta ignorada pelo Git) ou aponte `GLMERJ_DATA_DIR`.
+2. `node scripts/import-glmerj-initial-data.mjs`
+3. Revise `relatorio-importacao.json` e o SQL gerado em `data/glmerj/_generated/` (também ignorado).
+4. Execute o SQL no projeto de homologação, confira quantidades e RLS, e só então repita em produção.
+
+A migration `202608190006_cadastro_institucional.sql` cria só a estrutura. A migration `202608200001_vinculo_irmao_institucional.sql` adiciona `irmaos_autorizados.irmao_id` e sincroniza com `irmaos.auth_member_id`. Idempotência da carga: `ON CONFLICT` em nome normalizado, familiar+parentesco, casamento+data e `chave_idempotencia` da fundação.
+
+O dashboard usa `irmao_id` para destacar aniversário, iniciação e casamento autorizado do próprio Irmão. Nomes da extração em caixa alta são apresentados em title case só na interface.
+
+## Sessões da Loja
+
+As sessões ordinárias ocorrem na **2ª quarta-feira** e na **4ª quarta-feira** de cada mês, às **19h30** (America/Sao_Paulo). Agosto de 2026: 12 e 26.
+
+A função `private.gerar_sessoes_ordinarias(12)` faz upsert em `eventos_internos` com `chave_idempotencia = sessao_ordinaria:YYYY-MM-DD`. Edições excepcionais (cancelar, magna, administrativa, mudança de data) marcam `excepcional = true` e não são sobrescritas na geração.
+
+O calendário e o card **Próxima sessão** leem esses registros publicados e ativos. A fundação da Loja não compete com uma sessão futura mais próxima. Se houver comunicado de sessão ligado à próxima data, o card mostra um bloco complementar com o link “Ler comunicado →”, sem botão.
+
+## Comunicados e mensalidade
+
+Secretário e administrador cadastram comunicados em Gestão → Comunicados.
+
+Prioridade no dashboard:
+
+1. urgente ou destacado;
+2. sessão administrativa com presença obrigatória;
+3. demais comunicados ativos;
+4. aviso automático de mensalidade (somente do dia 5 ao dia 20);
+5. estado vazio: “Não há comunicados ativos no momento.”
+
+Em 21/08 o lembrete de mensalidade não aparece.
+
+No dashboard, Irmãos veem tipo, título, badges e o resumo. A janela de publicação (`inicio_exibicao` / `fim_exibicao`) permanece só na Gestão de Comunicados. Se o comunicado for de sessão, o card mostra a data e o horário do evento, não o período administrativo.
+
+## Situação maçônica
+
+`irmaos.situacao`: ativo, quiet_placet, transferencia, afastado, inativo, desligado, falecido.
+
+Quiet placet e transferência ficam em tabelas próprias, com histórico. Quiet placet **não** revoga o cadastro. A opção “Suspender acesso durante o afastamento” é administrativa. Transferência concluída desativa o cadastro na Loja atual e suspende/revoga o acesso, sem apagar aniversários e iniciações.
+
+## Logs
+
+A tela `/area-restrita/logs/` usa o mesmo shell autenticado. A consulta passa por `gerenciar-irmao` (`acao: logs`) com `service_role` e junta o nome pelo `auth_user_id`. Há paginação, contagem, ordenação por data, estado vazio e botão para limpar filtros. A UI vazia vinha do layout isolado e da ausência de nome/origem — não da falta de gravação.
+
+Novos eventos incluem `convite_aceito`, quiet placet, transferência, eventos e comunicados. A tela não exibe senha, token, CIM completa nem hashes.
+
+## Inventário e backlog
+
+- Escopo real desta branch: [feat-members-authentication-summary.md](feat-members-authentication-summary.md)
+- Itens pós-merge: [area-dos-irmaos-backlog.md](area-dos-irmaos-backlog.md)
+
+## Migrations
+
+Ordem local (arquivos em `supabase/migrations/`):
+
+1. `202608190001_irmaos_autorizados.sql`
+2. `202608190002_logs_autenticacao.sql`
+3. `202608190003_conteudo_interno.sql`
+4. `202608190004_harden_member_writes.sql`
+5. `202608190005_auth_hardening.sql`
+6. `202608190006_cadastro_institucional.sql`
+7. `202608200001_vinculo_irmao_institucional.sql`
+8. `202608200002_casamento_integridade.sql`
+9. `202608210001_gestao_sessoes_comunicados.sql`
+10. `202608210002_gerar_sessoes_service_role.sql`
+11. `202608220001_datas_institucionais.sql`
+
+A operação pontual de vínculo de CIMs oficiais **não fica no repositório** (dados pessoais). A cópia local, se existir, está em arquivos ignorados pelo Git. No projeto remoto essa operação já foi aplicada uma vez.
+
+## Edge Functions
+
+| Função | JWT no gateway | Uso |
+| --- | --- | --- |
+| `login-with-cim` | não | Login por CIM e senha |
+| `recuperar-senha-cim` | não | Pedido de recuperação |
+| `ativar-conta` | sim | Confirma CIM e cria senha |
+| `gerenciar-irmao` | sim | Administração e autoações do Irmão |
+| `bootstrap-convite-admin` | não | Primeiro administrador |
+| `registrar-interesse` | não | Site institucional |
+| `abrir-cartilha` | não | Site institucional |
+
+## Testes
+
+```bash
+node --test
+```
+
+Os testes unitários usam fixtures fictícios. A lista oficial de CIM não é versionada.
 
 ## Testes de integração (projeto de teste)
 

@@ -18,9 +18,34 @@ const STAFF_ACTIONS = [
   "ativar",
   "desativar",
   "desbloquear",
+  "cancelar_convite",
   "importar_celebracoes",
+  "listar_cadastro",
+  "salvar_irmao",
+  "salvar_familiar",
+  "salvar_casamento",
+  "remover_familiar",
+  "remover_casamento",
+  "listar_gestao",
+  "listar_historico",
+  "convidar_gestao",
+  "salvar_gestao_irmao",
+  "afastar_irmao",
+  "quiet_placet",
+  "encerrar_quiet_placet",
+  "regularizar_situacao",
+  "transferencia",
+  "atualizar_transferencia",
+  "suspender_acesso",
+  "reativar",
+  "listar_eventos",
+  "salvar_evento",
+  "cancelar_evento",
+  "gerar_sessoes",
+  "listar_comunicados",
+  "salvar_comunicado",
 ];
-const ADMIN_ACTIONS = ["alterar_perfil", "revogar", "logs", "configurar"];
+const ADMIN_ACTIONS = ["alterar_perfil", "revogar", "logs", "configurar", "excluir_irmao"];
 
 function authorizeGerenciarAcao(member, acao, body = {}) {
   void body.perfil;
@@ -68,8 +93,15 @@ test("gerenciar-irmao recusa anônimo, irmão, JWT inválido, body adulterado e 
   assert.equal(authorizeGerenciarAcao({ ativo: true, conta_ativada: false, perfil: "secretario" }, listar).status, 403);
   const secretary = { ativo: true, conta_ativada: true, perfil: "secretario" };
   assert.equal(authorizeGerenciarAcao(secretary, "alterar_perfil").ok, false);
+  assert.equal(authorizeGerenciarAcao(secretary, "excluir_irmao").ok, false);
   assert.equal(authorizeGerenciarAcao(secretary, "criar", { perfil: "administrador" }).ok, true);
+  assert.equal(authorizeGerenciarAcao(secretary, "listar_cadastro").ok, true);
+  assert.equal(authorizeGerenciarAcao(secretary, "listar_gestao").ok, true);
+  assert.equal(authorizeGerenciarAcao({ ativo: true, conta_ativada: true, perfil: "irmao" }, "logs").status, 403);
+  assert.equal(authorizeGerenciarAcao({ ativo: true, conta_ativada: true, perfil: "irmao" }, "salvar_irmao").status, 403);
   const admin = { ativo: true, conta_ativada: true, perfil: "administrador" };
+  assert.equal(authorizeGerenciarAcao(admin, "logs").ok, true);
+  assert.equal(authorizeGerenciarAcao(admin, "excluir_irmao").ok, true);
   assert.equal(authorizeGerenciarAcao(admin, "revogar", { perfil: "administrador", user_id: "forjado" }).ok, true);
   assert.equal(authorizeGerenciarAcao({ ativo: true, conta_ativada: true, perfil: "irmao" }, "registrar_logout").ok, true);
 });

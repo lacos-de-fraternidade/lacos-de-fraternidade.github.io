@@ -10,7 +10,9 @@ import {
   serviceClient,
   writeAuthLog,
 } from "../_shared/members.ts";
-import { authorizeGerenciarAcao } from "../_shared/staff-actions.ts";
+import { handleCadastro } from "../_shared/cadastro.ts";
+import { handleGestao } from "../_shared/gestao.ts";
+import { authorizeGerenciarAcao, resolveAssignableProfile } from "../_shared/staff-actions.ts";
 
 function maskCim(cim: string) {
   if (cim.length <= 4) return "****";
@@ -27,6 +29,7 @@ function publicMember(row: Record<string, unknown>) {
     ativo: row.ativo,
     conta_ativada: row.conta_ativada,
     convite_enviado_em: row.convite_enviado_em,
+    convite_expira_em: row.convite_expira_em,
     ultimo_acesso_em: row.ultimo_acesso_em,
     bloqueado_ate: row.bloqueado_ate,
     data_nascimento: row.data_nascimento,
@@ -66,16 +69,71 @@ Deno.serve(async (req) => {
     return jsonResponse(req, 200, { ok: true, membros: (data || []).map(publicMember) });
   }
 
-  if (acao === "logs") {
-    const { data } = await supabase.from("logs_autenticacao").select("id, evento, sucesso, criado_em, user_agent").order("criado_em", { ascending: false }).limit(200);
-    return jsonResponse(req, 200, { ok: true, logs: data || [] });
+  const gestao = await handleGestao(req, acao, payload, supabase, {
+    userId: actorId,
+    memberId: identity.member.id,
+    perfil: actorPerfil,
+  });
+  if (gestao) return gestao;
+
+  if (acao === "convidar_gestao") {
+    const irmaoId = String(payload.irmao_id || "");
+    const { data: irmao } = await supabase.from("irmaos").select("*").eq("id", irmaoId).maybeSingle();
+    if (!irmao) return jsonResponse(req, 400, { ok: false, error: "Irmão não encontrado." });
+    const cim = normalizeCim(irmao.cim || payload.cim);
+    const email = normalizeEmail(irmao.email || payload.email);
+    if (!isValidCim(cim)) return jsonResponse(req, 400, { ok: false, error: "Informe uma CIM válida." });
+    if (!email.includes("@")) return jsonResponse(req, 400, { ok: false, error: "Informe um e-mail válido." });
+    if (irmao.situacao && irmao.situacao !== "ativo") {
+      return jsonResponse(req, 400, { ok: false, error: "Somente Irmãos ativos podem receber acesso." });
+    }
+    const resolved = resolveAssignableProfile(actorPerfil, payload.perfil || "irmao");
+    if (!resolved.ok) return jsonResponse(req, 403, { ok: false, error: resolved.error });
+    let { data: acesso } = await supabase.from("irmaos_autorizados").select("*").eq("irmao_id", irmaoId).maybeSingle();
+    if (acesso?.conta_ativada) {
+      return jsonResponse(req, 400, { ok: false, error: "Este Irmão já possui conta ativada." });
+    }
+    if (!acesso) {
+      const created = await supabase.from("irmaos_autorizados").insert({
+        irmao_id: irmaoId,
+        cim,
+        nome: irmao.nome,
+        email,
+        perfil: resolved.perfil,
+        ativo: true,
+        data_iniciacao: irmao.data_iniciacao || null,
+      }).select("*").maybeSingle();
+      if (created.error || !created.data) {
+        return jsonResponse(req, 400, { ok: false, error: "Não foi possível criar o acesso." });
+      }
+      acesso = created.data;
+    } else {
+      await supabase.from("irmaos_autorizados").update({
+        cim,
+        email,
+        nome: irmao.nome,
+        perfil: resolved.perfil,
+        ativo: true,
+      }).eq("id", acesso.id);
+      acesso = { ...acesso, cim, email, nome: irmao.nome, perfil: resolved.perfil, ativo: true };
+    }
+    const sent = await sendMemberInvite(acesso, expiresAt, req, actorId, String(payload.site_origin || ""));
+    if (!sent.ok) return jsonResponse(req, 400, { ok: false, error: sent.error || GENERIC_INVITE_ERROR });
+    await supabase.from("irmaos_historico").insert({
+      irmao_id: irmaoId,
+      acesso_id: acesso.id,
+      evento: "convite_enviado",
+      criado_por: actorId,
+    });
+    return jsonResponse(req, 200, { ok: true });
   }
 
   if (acao === "criar") {
     const cim = normalizeCim(payload.cim);
     const email = normalizeEmail(payload.email);
     const nome = String(payload.nome || "").trim();
-    const perfil = actorPerfil === "administrador" ? String(payload.perfil || "irmao") : "irmao";
+    const resolved = resolveAssignableProfile(actorPerfil, payload.perfil || "irmao");
+    if (!resolved.ok) return jsonResponse(req, 403, { ok: false, error: resolved.error });
     if (!isValidCim(cim) || !nome || !email.includes("@")) {
       return jsonResponse(req, 400, { ok: false, error: GENERIC_INVITE_ERROR });
     }
@@ -83,12 +141,13 @@ Deno.serve(async (req) => {
       cim,
       nome,
       email,
-      perfil: ["irmao", "secretario", "administrador"].includes(perfil) ? perfil : "irmao",
+      perfil: resolved.perfil,
       ativo: true,
       data_nascimento: payload.data_nascimento || null,
       data_iniciacao: payload.data_iniciacao || null,
     }).select("*").maybeSingle();
     if (error || !data) return jsonResponse(req, 400, { ok: false, error: GENERIC_INVITE_ERROR });
+    await writeAuthLog({ cim: data.cim, evento: "membro_criado", sucesso: true, req, authUserId: actorId });
     return jsonResponse(req, 200, { ok: true, membro: publicMember(data) });
   }
 
@@ -102,6 +161,7 @@ Deno.serve(async (req) => {
     if (payload.data_iniciacao !== undefined) updates.data_iniciacao = payload.data_iniciacao || null;
     const { data, error } = await supabase.from("irmaos_autorizados").update(updates).eq("id", id).select("*").maybeSingle();
     if (error || !data) return jsonResponse(req, 400, { ok: false, error: GENERIC_INVITE_ERROR });
+    await writeAuthLog({ cim: data.cim, evento: "membro_editado", sucesso: true, req, authUserId: actorId });
     return jsonResponse(req, 200, { ok: true, membro: publicMember(data) });
   }
 
@@ -109,7 +169,8 @@ Deno.serve(async (req) => {
     const id = String(payload.id || "");
     const { data: member } = await supabase.from("irmaos_autorizados").select("*").eq("id", id).maybeSingle();
     if (!member || !member.ativo) return jsonResponse(req, 400, { ok: false, error: GENERIC_INVITE_ERROR });
-    await sendMemberInvite(member, expiresAt, req, actorId);
+    const sent = await sendMemberInvite(member, expiresAt, req, actorId, String(payload.site_origin || ""));
+    if (!sent.ok) return jsonResponse(req, 400, { ok: false, error: sent.error || GENERIC_INVITE_ERROR });
     return jsonResponse(req, 200, { ok: true });
   }
 
@@ -131,11 +192,11 @@ Deno.serve(async (req) => {
   if (acao === "alterar_perfil") {
     const id = String(payload.id || "");
     const perfil = String(payload.perfil || "");
-    if (!["irmao", "secretario", "administrador"].includes(perfil)) {
-      return jsonResponse(req, 400, { ok: false, error: GENERIC_INVITE_ERROR });
-    }
-    const { error } = await supabase.from("irmaos_autorizados").update({ perfil }).eq("id", id);
+    const resolvedProfile = resolveAssignableProfile(actorPerfil, perfil);
+    if (!resolvedProfile.ok) return jsonResponse(req, 403, { ok: false, error: resolvedProfile.error });
+    const { error } = await supabase.from("irmaos_autorizados").update({ perfil: resolvedProfile.perfil }).eq("id", id);
     if (error) return jsonResponse(req, 400, { ok: false, error: GENERIC_INVITE_ERROR });
+    await writeAuthLog({ evento: "membro_editado", sucesso: true, req, authUserId: actorId });
     return jsonResponse(req, 200, { ok: true });
   }
 
@@ -144,6 +205,17 @@ Deno.serve(async (req) => {
     const { error } = await supabase.from("irmaos_autorizados").update({
       tentativas_falhas: 0,
       bloqueado_ate: null,
+    }).eq("id", id);
+    if (error) return jsonResponse(req, 400, { ok: false, error: GENERIC_INVITE_ERROR });
+    return jsonResponse(req, 200, { ok: true });
+  }
+
+  if (acao === "cancelar_convite") {
+    const id = String(payload.id || "");
+    const { data: member } = await supabase.from("irmaos_autorizados").select("*").eq("id", id).maybeSingle();
+    if (!member || member.conta_ativada) return jsonResponse(req, 400, { ok: false, error: GENERIC_INVITE_ERROR });
+    const { error } = await supabase.from("irmaos_autorizados").update({
+      convite_expira_em: new Date().toISOString(),
     }).eq("id", id);
     if (error) return jsonResponse(req, 400, { ok: false, error: GENERIC_INVITE_ERROR });
     return jsonResponse(req, 200, { ok: true });
@@ -162,6 +234,9 @@ Deno.serve(async (req) => {
     await writeAuthLog({ cim: member.cim, evento: "acesso_revogado", sucesso: true, req, authUserId: actorId });
     return jsonResponse(req, 200, { ok: true });
   }
+
+  const cadastro = await handleCadastro(req, acao, payload, supabase);
+  if (cadastro) return cadastro;
 
   if (acao === "importar_celebracoes") {
     const itens = Array.isArray(payload.itens) ? payload.itens : [];
@@ -189,7 +264,7 @@ Deno.serve(async (req) => {
   }
 
   if (acao === "registrar_senha_alterada") {
-    await writeAuthLog({ evento: "senha_alterada", sucesso: true, req, authUserId: actorId });
+    await writeAuthLog({ evento: "senha_redefinida", sucesso: true, req, authUserId: actorId });
     await supabase.auth.admin.signOut(actorId, "others");
     return jsonResponse(req, 200, { ok: true });
   }

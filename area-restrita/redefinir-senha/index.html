@@ -19,13 +19,20 @@
         <form id="redefinir-form">
           <div class="field">
             <label for="senha">Nova senha</label>
-            <input id="senha" type="password" autocomplete="new-password" required />
+            <div class="password-field">
+              <input id="senha" type="password" autocomplete="new-password" required />
+              <button type="button" id="toggle-senha" class="password-toggle" aria-label="Mostrar senha" aria-pressed="false"></button>
+            </div>
             <div class="meter"><span id="meter-bar" style="width:0"></span></div>
             <small id="meter-label">Força da senha</small>
+            <ul class="req-list" id="req-list" aria-live="polite"></ul>
           </div>
           <div class="field">
             <label for="confirma">Confirmar senha</label>
-            <input id="confirma" type="password" autocomplete="new-password" required />
+            <div class="password-field">
+              <input id="confirma" type="password" autocomplete="new-password" required />
+              <button type="button" id="toggle-confirma" class="password-toggle" aria-label="Mostrar senha" aria-pressed="false"></button>
+            </div>
           </div>
           <p class="status" id="status" role="status"></p>
           <button class="button button-primary" type="submit">Salvar senha</button>

@@ -27,5 +27,16 @@ export function inspectPassword(password, extras = {}) {
 }
 
 export function strengthLabel(score) {
-  return ["Muito fraca", "Fraca", "Razoável", "Forte", "Excelente"][score] || "Muito fraca";
+  return ["Fraca", "Regular", "Boa", "Forte", "Excelente"][score] || "Fraca";
+}
+
+export function passwordRequirements(password) {
+  const value = String(password ?? "");
+  return [
+    { id: "len", label: "mínimo de 10 caracteres", ok: value.length >= 10 },
+    { id: "upper", label: "letra maiúscula", ok: /[A-ZÀ-Ü]/.test(value) },
+    { id: "lower", label: "letra minúscula", ok: /[a-zà-ü]/.test(value) },
+    { id: "num", label: "número", ok: /[0-9]/.test(value) },
+    { id: "special", label: "caractere especial", ok: /[^A-Za-z0-9À-ü]/.test(value) },
+  ];
 }

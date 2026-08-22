@@ -9,8 +9,7 @@ import {
   serviceClient,
   writeAuthLog,
 } from "../_shared/members.ts";
-
-const SITE_URL = Deno.env.get("PUBLIC_SITE_URL") || "https://lacos-de-fraternidade.github.io";
+import { passwordResetUrl } from "../_shared/site-url.ts";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return optionsResponse(req);
@@ -60,7 +59,7 @@ Deno.serve(async (req) => {
     const { data: member } = await supabase.from("irmaos_autorizados").select("*").eq("cim", cim).maybeSingle();
     if (member?.ativo && member.conta_ativada && member.email) {
       await supabase.auth.admin.resetPasswordForEmail(member.email, {
-        redirectTo: `${SITE_URL}/area-restrita/redefinir-senha/`,
+        redirectTo: passwordResetUrl(String(payload.site_origin || "")),
       });
     }
   }

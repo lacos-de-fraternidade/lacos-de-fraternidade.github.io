@@ -14,11 +14,9 @@
   <body class="area-body">
     <main class="auth-shell">
       <section class="auth-card">
-        <img src="../../assets/logo-classica.jpg" alt="" width="72" height="72" style="border-radius:50%;margin-inline:auto" />
-        <p class="eyebrow">Acesso restrito</p>
+        <img src="../../assets/logo-classica.jpg" alt="" width="72" height="72" class="auth-logo" />
         <h1>Área dos Irmãos</h1>
-        <p>Acesso exclusivo aos membros previamente autorizados pela ARLS Laços de Fraternidade 357 nº 251.</p>
-        <p>O acesso à Área dos Irmãos é exclusivo para membros previamente cadastrados pela Secretaria.</p>
+        <p>Acesso exclusivo aos membros previamente cadastrados pela Secretaria da ARLS Laços de Fraternidade 357 nº 251.</p>
         <form id="login-form">
           <div class="field">
             <label for="cim">CIM</label>
@@ -26,9 +24,9 @@
           </div>
           <div class="field">
             <label for="senha">Senha</label>
-            <div class="password-row">
+            <div class="password-field">
               <input id="senha" name="senha" type="password" autocomplete="current-password" required />
-              <button type="button" id="toggle-senha">Mostrar</button>
+              <button type="button" id="toggle-senha" class="password-toggle" aria-label="Mostrar senha" aria-pressed="false"></button>
             </div>
           </div>
           <p class="status" id="status" role="status"></p>

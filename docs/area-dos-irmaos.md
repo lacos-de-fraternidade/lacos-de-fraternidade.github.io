@@ -149,9 +149,10 @@ Use apenas CIM e senha fictícias. O frontend chama `login-with-cim` e grava a s
 4. Authentication → Email OTP Expiration: igual a `auth_otp_expira_segundos` (padrão 3600).
 5. Desativar sign-ups públicos.
 6. Configurar SMTP.
-7. Depois do primeiro administrador ativado: remover `BOOTSTRAP_INVITE_SECRET`.
-8. Tabelas `auth_rate_ip` e `configuracoes_autenticacao` têm RLS sem política para `anon`/`authenticated` de propósito: só `service_role` acessa.
-9. GitHub Pages não envia cabeçalhos HTTP customizados; CSP e Referrer-Policy entram via `<meta>`.
+7. Aplicar os templates de convite e recuperação em português. Ver `docs/supabase-email-templates.md`.
+8. Depois do primeiro administrador ativado: remover `BOOTSTRAP_INVITE_SECRET`.
+9. Tabelas `auth_rate_ip` e `configuracoes_autenticacao` têm RLS sem política para `anon`/`authenticated` de propósito: só `service_role` acessa.
+10. GitHub Pages não envia cabeçalhos HTTP customizados; CSP e Referrer-Policy entram via `<meta>`.
 
 ## Cadastro institucional e extração GLMERJ
 

@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { establishAuthSession, inviteLinkError } from "../area-restrita/js/auth-session.js";
-import { canReplacePendingAuthUser, inviteRedirectTo, isExistingAuthUserError, localActivateUrlFromPublished } from "../area-restrita/js/invite-redirect.js";
+import { canReplacePendingAuthUser, inviteRedirectTo, isEmailRateLimitError, isExistingAuthUserError, localActivateUrlFromPublished } from "../area-restrita/js/invite-redirect.js";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (relative) => readFileSync(join(root, relative), "utf8");
@@ -28,10 +28,13 @@ test("reenviar convite reaproveita usuário pendente e não envia recuperação 
   assert.equal(canReplacePendingAuthUser({ id: "a1" }, null), true);
   assert.equal(canReplacePendingAuthUser({ id: "a1" }, { id: "a1", conta_ativada: false }), true);
   assert.equal(canReplacePendingAuthUser({ id: "a1" }, { id: "outro", conta_ativada: true }), false);
+  assert.equal(isEmailRateLimitError("email rate limit exceeded"), true);
   const members = read("supabase/functions/_shared/members.ts");
   assert.match(members, /inviteUserByEmail/);
   assert.match(members, /deleteUser/);
+  assert.match(members, /EMAIL_RATE_LIMIT_ERROR/);
   assert.doesNotMatch(members, /resetPasswordForEmail/);
+  assert.doesNotMatch(members, /sendInviteEmail/);
   assert.match(read("area-restrita/convites/convites.js"), /enviar_convite/);
 });
 

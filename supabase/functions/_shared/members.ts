@@ -79,6 +79,12 @@ export function isExistingAuthUserError(message?: string | null) {
   return /already|registered|exists|duplicate/i.test(String(message || ""));
 }
 
+export function isEmailRateLimitError(message?: string | null) {
+  return /rate limit|over_email_send_rate_limit|429/i.test(String(message || ""));
+}
+
+export const EMAIL_RATE_LIMIT_ERROR = "O envio de e-mails atingiu o limite temporário. Aguarde cerca de uma hora e tente novamente.";
+
 export function canReplacePendingAuthUser(
   member: { id: string; conta_ativada?: boolean },
   owner?: { id: string; conta_ativada?: boolean } | null,
@@ -131,7 +137,12 @@ export async function sendMemberInvite(
     }
   }
   if (invited.error || !invited.data?.user) {
-    return { ok: false as const, error: "Não foi possível enviar o convite agora. Aguarde alguns minutos e tente novamente." };
+    return {
+      ok: false as const,
+      error: isEmailRateLimitError(invited.error?.message)
+        ? EMAIL_RATE_LIMIT_ERROR
+        : "Não foi possível enviar o convite agora. Aguarde alguns minutos e tente novamente.",
+    };
   }
   await supabase.from("irmaos_autorizados").update({
     convite_enviado_em: new Date().toISOString(),

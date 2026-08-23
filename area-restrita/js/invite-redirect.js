@@ -30,6 +30,10 @@ export function isExistingAuthUserError(message) {
   return /already|registered|exists|duplicate/i.test(String(message || ""));
 }
 
+export function isEmailRateLimitError(message) {
+  return /rate limit|over_email_send_rate_limit|429|limite temporário/i.test(String(message || ""));
+}
+
 export function canReplacePendingAuthUser(member, owner) {
   if (owner && owner.id !== member?.id) return false;
   return true;

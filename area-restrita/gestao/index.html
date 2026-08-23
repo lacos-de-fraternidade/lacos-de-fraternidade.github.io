@@ -20,16 +20,25 @@
           <p class="muted">Cadastro institucional, acesso, situação maçônica, familiares e eventos da Loja.</p>
           <div class="gold-rule" aria-hidden="true"></div>
         </header>
-        <div class="tab-bar" id="tabs" role="tablist">
-          <button type="button" class="tab-btn" data-tab="irmaos" aria-selected="true">Irmãos</button>
-          <button type="button" class="tab-btn" data-tab="familiares">Familiares</button>
-          <button type="button" class="tab-btn" data-tab="casamentos">Casamentos</button>
-          <button type="button" class="tab-btn" data-tab="eventos">Eventos</button>
-          <button type="button" class="tab-btn" data-tab="comunicados">Comunicados</button>
-          <div class="nav-dropdown admin-only" data-dropdown>
-            <button type="button" class="tab-btn nav-dropdown-toggle" aria-expanded="false">Mais</button>
-            <div class="nav-dropdown-menu" hidden>
-              <button type="button" data-tab="ferramentas">Ferramentas de migração</button>
+        <div class="admin-section-nav" data-admin-nav data-section-switcher>
+          <button type="button" class="section-switcher__trigger" id="section-switcher-trigger" aria-expanded="false" aria-haspopup="true" aria-controls="tabs">
+            <span class="section-switcher__kicker">Seção administrativa</span>
+            <span class="section-switcher__value">
+              <span id="section-switcher-current">Irmãos</span>
+              <span class="section-switcher__chevron" aria-hidden="true">▼</span>
+            </span>
+          </button>
+          <div class="tab-bar" id="tabs" role="tablist">
+            <button type="button" class="tab-btn" data-tab="irmaos" aria-selected="true">Irmãos</button>
+            <button type="button" class="tab-btn" data-tab="familiares">Familiares</button>
+            <button type="button" class="tab-btn" data-tab="casamentos">Casamentos</button>
+            <button type="button" class="tab-btn" data-tab="eventos" data-future-page>Eventos</button>
+            <button type="button" class="tab-btn" data-tab="comunicados" data-future-page>Comunicados</button>
+            <div class="nav-dropdown admin-only" data-dropdown>
+              <button type="button" class="tab-btn nav-dropdown-toggle" aria-expanded="false">Mais</button>
+              <div class="nav-dropdown-menu" hidden>
+                <button type="button" data-tab="ferramentas">Ferramentas de migração</button>
+              </div>
             </div>
           </div>
         </div>
@@ -37,8 +46,8 @@
         <section data-panel="irmaos" class="irmaos-panel">
           <div class="irmaos-toolbar members-toolbar">
             <div class="field irmaos-search members-toolbar__search">
-              <label for="busca" class="sr-only">Buscar por nome, CIM ou e-mail</label>
-              <input id="busca" type="search" placeholder="Buscar por nome, CIM ou e-mail..." autocomplete="off" />
+              <label for="busca">Buscar por nome, CIM ou e-mail</label>
+              <input id="busca" type="search" placeholder="Buscar por nome, CIM ou e-mail" autocomplete="off" />
             </div>
             <div class="field members-toolbar__filter">
               <label for="filtro-situacao">Situação</label>

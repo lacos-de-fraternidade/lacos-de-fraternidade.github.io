@@ -203,6 +203,10 @@ export function ficheActions(row, profile) {
   return actions;
 }
 
+export function listMenuActions(row, profile) {
+  return [{ id: "ver_detalhes", label: "Ver detalhes" }, ...ficheActions(row, profile)];
+}
+
 export function buildBrotherTimeline(row, historico = []) {
   const items = [];
   if (row?.data_iniciacao) {

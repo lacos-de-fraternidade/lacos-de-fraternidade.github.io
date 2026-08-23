@@ -12,8 +12,11 @@ import {
 import {
   cellAriaLabel,
   cellLineLabel,
+  cellHasLongText,
+  cellMobilePreview,
   cellPreview,
   emptyDayCopy,
+  emptyDayNextHeading,
   emptyDayHint,
   filterTriggerLabel,
   findNextSessionItem,
@@ -120,7 +123,14 @@ test("células e painel do dia comunicam o conteúdo sem depender só de pontos"
   assert.equal(many.lines.length, 2);
   assert.match(cellAriaLabel(26, 8, [{ titulo: "Sessão Ordinária", horario: "19h30" }], { isNext: true }), /19h30/);
   assert.match(cellAriaLabel(26, 8, [{ titulo: "Sessão Ordinária", horario: "19h30" }], { isNext: true }), /próxima sessão/);
-  assert.equal(emptyDayCopy(), "Nenhum compromisso programado.");
+  assert.equal(emptyDayCopy(), "Nenhum compromisso neste dia.");
+  assert.equal(emptyDayNextHeading(), "Próxima sessão");
+  assert.equal(cellMobilePreview([{ categoria: "sessao", titulo: "Sessão Ordinária da ARLS Laços de Fraternidade" }]).text, "●");
+  assert.equal(cellHasLongText("Paulo Henrique Braga da Silva"), true);
+  assert.equal(cellMobilePreview([
+    { categoria: "irmao", titulo: "Paulo Henrique Braga da Silva" },
+    { categoria: "iniciacao", titulo: "Aniversário de Iniciação" },
+  ]).text, "★ 2");
   assert.equal(emptyDayHint(), "Aproveite este dia para organizar sua agenda para a próxima sessão.");
   assert.equal(shortCalendarTitle({ titulo: "Paulo Henrique Braga da Silva", tituloCurto: "Paulo Henrique Braga" }), "Paulo Henrique Braga");
   assert.equal(formatHourBr(new Date(2026, 7, 26, 19, 30)), "19h30");
@@ -130,7 +140,7 @@ test("células e painel do dia comunicam o conteúdo sem depender só de pontos"
     from: new Date(2026, 7, 21),
   });
   assert.equal(sessionCopy.kicker, "Próximo compromisso");
-  assert.equal(sessionCopy.text, "Sessão Ordinária em 26 de agosto às 19h30.");
+  assert.equal(sessionCopy.text, "Sessão Ordinária em 26 de agosto, às 19h30.");
   const honorCopy = monthContextCopy({
     items: [{ categoria: "data_maconica", titulo: "Dia do Maçom", dia: 20, mes: 8 }],
     view: { month: 8, year: 2026 },
@@ -194,7 +204,7 @@ test("página do calendário usa o padrão visual da agenda da Loja", () => {
   assert.match(read("area-restrita/calendario/index.html"), /calendar-period/);
   assert.match(read("area-restrita/calendario/index.html"), /calendar-toolbar/);
   assert.match(read("area-restrita/calendario/index.html"), /calendar-filter-trigger/);
-  assert.match(read("area-restrita/calendario/index.html"), />Filtro</);
+  assert.match(read("area-restrita/calendario/index.html"), /Filtrar calendário/);
   assert.doesNotMatch(read("area-restrita/calendario/calendario.js"), /Nenhum compromisso programado/);
   assert.match(read("area-restrita/css/area.css"), /border-radius: 999px/);
   assert.match(read("area-restrita/css/area.css"), /min-height: 58px/);

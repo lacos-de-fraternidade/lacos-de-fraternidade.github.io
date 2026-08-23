@@ -176,7 +176,7 @@ function nextViewWithRemaining(view, items, from) {
 function contextWhen(item, view) {
   const month = monthName(view.month).toLowerCase();
   return item.horario
-    ? `${item.titulo} em ${item.dia} de ${month} às ${item.horario}.`
+    ? `${item.titulo} em ${item.dia} de ${month}, às ${item.horario}.`
     : `${item.titulo} em ${item.dia} de ${month}.`;
 }
 
@@ -290,8 +290,40 @@ export function isSameCalendarDay(item, view, day) {
     && (item.year == null || Number(item.year) === Number(view.year));
 }
 
+export function cellHasLongText(text) {
+  const value = String(text || "").trim();
+  if (!value) return false;
+  return value.length > 8 || /\s/.test(value);
+}
+
+export function cellMobilePreview(items) {
+  const list = items || [];
+  if (!list.length) return { mode: "empty", mark: "", text: "", count: 0, titles: [] };
+  if (list.length === 1) {
+    return {
+      mode: "single",
+      mark: "●",
+      text: "●",
+      count: 1,
+      categoria: list[0].categoria,
+      titles: [],
+    };
+  }
+  return {
+    mode: "multi",
+    mark: "★",
+    text: `★ ${list.length}`,
+    count: list.length,
+    titles: [],
+  };
+}
+
 export function emptyDayCopy() {
-  return "Nenhum compromisso programado.";
+  return "Nenhum compromisso neste dia.";
+}
+
+export function emptyDayNextHeading() {
+  return "Próxima sessão";
 }
 
 export function emptyDayHint() {

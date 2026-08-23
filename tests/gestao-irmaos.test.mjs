@@ -22,6 +22,7 @@ import {
   familyGroups,
   ficheActions,
   filterGestaoBrothers,
+  listMenuActions,
   filtersAreActive,
   formatFicheDate,
   grauLabel,
@@ -85,6 +86,13 @@ test("ficha da gestão concentra ações e omite o menu da lista", () => {
   assert.equal(canDeleteBrother(rows[0], { perfil: "administrador", id: "a1" }), false);
   assert.equal(canDeleteBrother(rows[1], { perfil: "secretario", id: "a2" }), false);
   assert.equal(canDeleteBrother(rows[1], { perfil: "administrador", id: "a1" }), true);
+  assert.deepEqual(listMenuActions(rows[1], { perfil: "administrador", id: "a1" }).map((item) => item.id), [
+    "ver_detalhes",
+    "editar_cadastro",
+    "configurar_acesso",
+    "registrar_movimentacao",
+    "excluir_cadastro",
+  ]);
   const choices = movementChoices().map((item) => item.id);
   assert.deepEqual(choices, ["quiet", "transfer", "afastamento", "retorno"]);
   assert.equal(movementTitle("quiet"), "Registrar quiet placet");
@@ -141,8 +149,10 @@ test("página da gestão prepara a aba Irmãos sem esvaziar o layout", () => {
   assert.match(html, /Todas as situações/);
   assert.match(html, /Todos os perfis/);
   assert.match(html, /Todos os acessos/);
-  assert.match(html, /Buscar por nome, CIM ou e-mail\.\.\./);
-  assert.match(html, /sr-only/);
+  assert.match(html, /Buscar por nome, CIM ou e-mail/);
+  assert.match(html, /<label for="busca">Buscar por nome, CIM ou e-mail<\/label>/);
+  assert.match(html, /section-switcher/);
+  assert.match(html, /Seção administrativa/);
   assert.doesNotMatch(html, />Buscar irmão</);
   assert.doesNotMatch(html, /Nome • CIM • e-mail/);
   assert.match(html, /members-toolbar/);

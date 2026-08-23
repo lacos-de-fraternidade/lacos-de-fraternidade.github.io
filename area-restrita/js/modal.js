@@ -29,13 +29,16 @@ export function bindDialog(dialog, { opener, onClose } = {}) {
   });
   dialog.addEventListener("close", () => {
     onClose?.();
+    syncOverlayLock();
     previous?.focus?.();
     previous = null;
   });
   opener?.addEventListener("click", () => open(opener));
   function open(from) {
     if (!dialog.open) previous = from || document.activeElement;
+    applyDialogLayout(dialog);
     if (!dialog.open && typeof dialog.showModal === "function") dialog.showModal();
+    syncOverlayLock();
     const focusFirst = () => (
       dialog.querySelector("[data-initial-focus]")
       || dialog.querySelector("input, textarea, select, button:not([data-close])")
@@ -45,4 +48,19 @@ export function bindDialog(dialog, { opener, onClose } = {}) {
     else focusFirst();
   }
   return { open, close: () => dialog.close(), isOpen: () => Boolean(dialog.open) };
+}
+
+export function applyDialogLayout(dialog, media = globalThis.matchMedia) {
+  if (!dialog?.classList?.toggle) return dialog;
+  const mobile = typeof media === "function" && Boolean(media("(max-width: 768px)")?.matches);
+  dialog.classList.toggle("is-fullscreen", mobile);
+  return dialog;
+}
+
+export function syncOverlayLock() {
+  if (typeof document === "undefined") return;
+  document.querySelectorAll("dialog[open]").forEach((dialog) => applyDialogLayout(dialog));
+  const locked = Boolean(document.querySelector("dialog[open], .drawer-backdrop"));
+  document.body?.classList.toggle("overlay-open", locked);
+  document.body?.classList.toggle("modal-open", locked);
 }

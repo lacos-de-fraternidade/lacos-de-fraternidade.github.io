@@ -5,7 +5,9 @@ import { bindBrDatePicker, bindBrDateInput, bindBrTimeInput, formatDateTimeBr, i
 import { createSearchSelect } from "../js/search-select.js";
 import { eligibleConjuges, eligibleIrmaos } from "../js/casamento-elegibilidade.js";
 import { displayPersonName } from "../js/vinculo.js";
-import { bindDialog } from "../js/modal.js";
+import { bindDialog, syncOverlayLock } from "../js/modal.js";
+import { adminNavState, bindLayoutMode, isMobileLayout } from "../js/layout-mode.js";
+import { sectionLabel, shouldHideDesktopTabs } from "../js/section-switcher.js";
 import { beginSubmit, clearToasts, endSubmit, showToast } from "../js/feedback.js";
 import {
   NOTICE_STATUS_LABELS,
@@ -33,6 +35,7 @@ import {
   familyGroups,
   ficheActions,
   filterGestaoBrothers,
+  listMenuActions,
   filtersAreActive,
   formatFicheDate,
   grauLabel,
@@ -82,6 +85,8 @@ await bootPage("Gestão de Irmãos", async (page) => {
       document.querySelector("#tabs [data-dropdown]")?.remove();
     }
     bindTabs();
+    bindSectionSwitcher();
+    bindRowMenus();
     initializeNewMemberModal();
     novoDialog = bindDialog(document.querySelector("#dialog-novo"), {
       onClose: handleNewMemberModalClosed,
@@ -142,11 +147,92 @@ function bindTabs() {
   });
 }
 
+function bindSectionSwitcher() {
+  const trigger = document.querySelector("#section-switcher-trigger");
+  const nav = document.querySelector("[data-admin-nav]");
+  if (!trigger || !nav) return;
+  trigger.addEventListener("click", (event) => {
+    event.stopPropagation();
+    nav.classList.toggle("is-open");
+    applyAdminNavLayout();
+  });
+  trigger.addEventListener("keydown", (event) => {
+    if (event.key !== "ArrowDown" && event.key !== "Enter" && event.key !== " ") return;
+    event.preventDefault();
+    nav.classList.add("is-open");
+    applyAdminNavLayout();
+    document.querySelector("#tabs [aria-selected='true'], #tabs [data-tab]")?.focus();
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") closeSectionMenu();
+  });
+  bindLayoutMode(() => {
+    closeSectionMenu();
+    applyAdminNavLayout();
+    syncOverlayLock();
+  });
+  syncSectionSwitcher(document.querySelector("[data-tab][aria-selected='true']")?.dataset.tab || "irmaos");
+  applyAdminNavLayout();
+}
+
+function bindRowMenus() {
+  document.addEventListener("click", (event) => {
+    if (!event.target.closest(".overflow-menu")) closeRowMenus();
+    if (!event.target.closest("[data-admin-nav]")) closeSectionMenu();
+  });
+}
+
+function applyAdminNavLayout() {
+  const nav = document.querySelector("[data-admin-nav]");
+  const tabs = document.querySelector("#tabs");
+  const trigger = document.querySelector("#section-switcher-trigger");
+  const extraMenu = tabs?.querySelector("[data-dropdown] .nav-dropdown-menu");
+  const extraToggle = tabs?.querySelector(".nav-dropdown-toggle");
+  const mobile = isMobileLayout();
+  const open = Boolean(nav?.classList.contains("is-open"));
+  const state = adminNavState({ mobile, open });
+  if (tabs) {
+    tabs.hidden = shouldHideDesktopTabs(mobile, open) || state.tabBarHidden;
+    tabs.setAttribute("aria-hidden", String(tabs.hidden));
+  }
+  trigger?.setAttribute("aria-expanded", String(mobile && open));
+  if (extraToggle) extraToggle.hidden = mobile;
+  if (extraMenu) extraMenu.hidden = !mobile && extraToggle?.getAttribute("aria-expanded") !== "true";
+}
+
+function closeSectionMenu() {
+  const nav = document.querySelector("[data-admin-nav]");
+  if (!nav?.classList.contains("is-open")) {
+    applyAdminNavLayout();
+    return;
+  }
+  nav.classList.remove("is-open");
+  applyAdminNavLayout();
+}
+
+function syncSectionSwitcher(name) {
+  const current = document.querySelector("#section-switcher-current");
+  const tab = document.querySelector(`#tabs [data-tab="${name}"]`);
+  if (current) current.textContent = tab?.textContent.trim() || sectionLabel(name);
+}
+
 function openTab(name) {
   clearToasts();
   document.querySelectorAll("[data-tab]").forEach((node) => node.setAttribute("aria-selected", String(node.dataset.tab === name)));
   document.querySelectorAll("[data-panel]").forEach((panel) => {
     panel.hidden = panel.dataset.panel !== name;
+  });
+  syncSectionSwitcher(name);
+  closeSectionMenu();
+}
+
+function closeRowMenus() {
+  document.querySelectorAll(".overflow-menu.is-open").forEach((node) => {
+    node.classList.remove("is-open", "is-left", "is-up");
+    const panel = node.querySelector(".overflow-menu__panel");
+    const toggle = node.querySelector(".overflow-menu__toggle");
+    if (panel) panel.hidden = true;
+    toggle?.setAttribute("aria-expanded", "false");
   });
 }
 
@@ -232,6 +318,7 @@ function renderList() {
   const count = document.querySelector("#irmaos-count");
   const clear = document.querySelector("#limpar-filtros-irmaos");
   if (!root || !count) return;
+  applyAdminNavLayout();
   const filters = currentFilters();
   const filtered = filtersAreActive(filters);
   if (clear) clear.hidden = !filtered;
@@ -298,7 +385,9 @@ function renderBrotherRow(row) {
   const access = accessStatus(row);
   const acesso = el("div", "irmaos-acesso");
   if (row.acesso_id && row.perfil) acesso.append(el("p", "irmaos-role", roleLabel(row.perfil)));
-  acesso.append(el("p", "irmaos-access-label", access.label));
+  const accessLine = el("p", "irmaos-access-label");
+  accessLine.append(el("span", "irmaos-access-prefix", "Acesso: "), document.createTextNode(access.label));
+  acesso.append(accessLine);
   const actions = el("div", "irmaos-actions record-actions");
   const details = document.createElement("button");
   details.type = "button";
@@ -308,7 +397,7 @@ function renderBrotherRow(row) {
     event.stopPropagation();
     openDrawer(row);
   });
-  actions.append(details);
+  actions.append(details, renderOverflowMenu(row));
   card.append(identity, situacao, acesso, actions);
   card.addEventListener("click", (event) => {
     if (!rowClickOpensDetails(event.target)) return;
@@ -342,11 +431,54 @@ function onDrawerEscape(event) {
   closeDrawer();
 }
 
+function renderOverflowMenu(row) {
+  const wrap = el("div", "overflow-menu");
+  const toggle = document.createElement("button");
+  toggle.type = "button";
+  toggle.className = "icon-button overflow-menu__toggle";
+  toggle.setAttribute("aria-label", "Mais ações administrativas");
+  toggle.setAttribute("aria-haspopup", "true");
+  toggle.setAttribute("aria-expanded", "false");
+  toggle.textContent = "⋮";
+  const panel = el("div", "overflow-menu__panel");
+  panel.hidden = true;
+  panel.setAttribute("role", "menu");
+  listMenuActions(row, ctx.profile).forEach((action) => {
+    const item = document.createElement("button");
+    item.type = "button";
+    item.className = `overflow-menu__item${action.id === "excluir_cadastro" ? " is-danger" : ""}`;
+    item.setAttribute("role", "menuitem");
+    item.textContent = action.label;
+    item.addEventListener("click", (event) => {
+      event.stopPropagation();
+      closeRowMenus();
+      if (action.id === "ver_detalhes") openDrawer(row);
+      else runFicheAction(row, action.id);
+    });
+    panel.append(item);
+  });
+  toggle.addEventListener("click", (event) => {
+    event.stopPropagation();
+    const willOpen = !wrap.classList.contains("is-open");
+    closeRowMenus();
+    if (!willOpen) return;
+    wrap.classList.add("is-open");
+    panel.hidden = false;
+    toggle.setAttribute("aria-expanded", "true");
+    const rect = panel.getBoundingClientRect();
+    if (rect.right > window.innerWidth - 8) wrap.classList.add("is-left");
+    if (rect.bottom > window.innerHeight - 8) wrap.classList.add("is-up");
+  });
+  wrap.append(toggle, panel);
+  return wrap;
+}
+
 function closeDrawer() {
   drawerToken += 1;
   drawerRow = null;
   document.removeEventListener("keydown", onDrawerEscape);
   document.querySelector("#drawer-root")?.replaceChildren();
+  syncOverlayLock();
 }
 
 async function openDrawer(row) {
@@ -354,23 +486,24 @@ async function openDrawer(row) {
   drawerRow = row;
   const root = document.querySelector("#drawer-root");
   if (!root) return;
-  const backdrop = el("div", "drawer-backdrop");
-  const drawer = el("aside", "drawer irmaos-drawer");
+  const mobile = isMobileLayout();
+  const backdrop = el("div", `drawer-backdrop${mobile ? " is-fullscreen" : ""}`);
+  const drawer = el("aside", `drawer irmaos-drawer${mobile ? " is-fullscreen" : ""}`);
   drawer.setAttribute("role", "dialog");
   drawer.setAttribute("aria-modal", "true");
-  const head = el("header", "modal-head");
-  const titleWrap = el("div");
+  const head = el("header", "modal-head irmaos-drawer__head");
+  const titleWrap = el("div", "irmaos-drawer__identity");
   const grau = grauLabel(row);
   titleWrap.append(el("h2", "", displayPersonName(row.nome)));
-  titleWrap.append(el("p", "muted", grau ? `${cimLabel(row)} · ${grau}` : cimLabel(row)));
+  titleWrap.append(el("p", "irmaos-drawer__cim", grau ? `${cimLabel(row)} · ${grau}` : cimLabel(row)));
   titleWrap.append(situacaoMark(row.situacao));
   const closeBtn = document.createElement("button");
   closeBtn.type = "button";
-  closeBtn.className = "icon-button";
-  closeBtn.setAttribute("aria-label", "Fechar");
-  closeBtn.textContent = "×";
+  closeBtn.className = mobile ? "drawer-back" : "icon-button";
+  closeBtn.setAttribute("aria-label", "Voltar");
+  closeBtn.textContent = mobile ? "← Voltar" : "×";
   closeBtn.addEventListener("click", closeDrawer);
-  head.replaceChildren(titleWrap, closeBtn);
+  head.replaceChildren(closeBtn, titleWrap);
   drawer.append(head);
   const body = el("div", "fiche-body");
   renderFicheBody(body, row, []);
@@ -379,10 +512,13 @@ async function openDrawer(row) {
   actions.append(el("h3", "", "Ações"));
   const actionsWrap = el("div", "drawer-actions");
   ficheActions(row, ctx.profile).forEach((action) => {
+    if (action.id === "excluir_cadastro") {
+      actionsWrap.append(el("div", "fiche-actions__danger-gap", ""));
+    }
     actionsWrap.append(ghostButton(
       action.label,
       () => runFicheAction(row, action.id),
-      action.id === "excluir_cadastro" ? "button-danger" : "",
+      action.id === "excluir_cadastro" ? "button-danger" : "button-secondary",
     ));
   });
   actions.append(actionsWrap);
@@ -394,6 +530,7 @@ async function openDrawer(row) {
   document.addEventListener("keydown", onDrawerEscape);
   backdrop.append(drawer);
   root.replaceChildren(backdrop);
+  syncOverlayLock();
   closeBtn.focus();
 
   if (!row.irmao_id) return;
@@ -1236,15 +1373,16 @@ function renderEventos() {
   if (!eventos.length) return showEmpty(root, "Nenhum evento interno cadastrado.", { compact: true });
   root.replaceChildren();
   eventos.forEach((row) => {
-    const card = el("article", "record-row");
-    const main = el("div", "record-main");
+    const card = el("article", "agenda-event-card record-row");
+    const main = el("div", "record-main agenda-event-card__main");
     main.append(
-      el("strong", "", row.titulo),
-      el("p", "muted", `${formatDateTimeBr(row.inicia_em)}${row.gerado_automaticamente ? " · Gerada automaticamente" : ""}`),
+      el("strong", "agenda-event-card__title", row.titulo),
+      el("p", "muted agenda-event-card__when", formatDateTimeBr(row.inicia_em)),
     );
-    const meta = el("div", "record-meta");
+    const meta = el("div", "record-meta agenda-event-card__meta");
     meta.append(el("span", `status-pill${row.ativo === false ? " is-inactive" : ""}`, row.ativo === false ? "Cancelada" : (EVENT_TYPE_LABELS[row.tipo_evento] || row.tipo_evento)));
-    const actions = el("div", "record-actions");
+    if (row.gerado_automaticamente) meta.append(el("p", "muted agenda-event-card__origin", "Gerada automaticamente"));
+    const actions = el("div", "record-actions agenda-event-card__actions");
     actions.append(ghostButton("Editar", () => fillEvento(row)));
     if (row.ativo !== false) {
       actions.append(ghostButton("Cancelar sessão", () => run({ acao: "cancelar_evento", id: row.id }, true), "button-danger"));

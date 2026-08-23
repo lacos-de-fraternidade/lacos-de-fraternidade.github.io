@@ -18,8 +18,11 @@ import {
   categoryLabel,
   categoryMark,
   cellAriaLabel,
+  cellMobilePreview,
   cellPreview,
   dayHeading,
+  emptyDayCopy,
+  emptyDayNextHeading,
   filterCalendarItems,
   filterTriggerLabel,
   findNextSessionItem,
@@ -38,6 +41,7 @@ import {
   sortAgendaItems,
 } from "../js/calendario-agenda.js";
 import { displayMainName, displayPersonName } from "../js/vinculo.js";
+import { bindLayoutMode, isMobileLayout } from "../js/layout-mode.js";
 import { isLodgeSessionType, LODGE_NAME, sessionTitle } from "../js/sessoes.js";
 
 const WEEKDAYS = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
@@ -71,6 +75,9 @@ await bootPage("Calendário", async (ctx) => {
     if (event.key !== "Escape" || !filterOpen) return;
     filterOpen = false;
     renderFilter();
+  });
+  bindLayoutMode(() => {
+    if (cache.length) renderMonth();
   });
   await load(ctx);
 });
@@ -209,9 +216,11 @@ function renderContext() {
   const node = document.querySelector("#contexto-mes");
   const copy = monthContextCopy({ items: filterCalendarItems(cache, hiddenTypes), view });
   node.replaceChildren();
-  node.insertAdjacentHTML("afterbegin", iconSvg("evento"));
-  if (copy.kicker) node.append(el("strong", "", `${copy.kicker}:`));
-  node.append(document.createTextNode(copy.kicker ? ` ${copy.text}` : copy.text));
+  const title = el("p", "calendar-next-summary__title");
+  title.insertAdjacentHTML("afterbegin", iconSvg("evento"));
+  title.append(el("strong", "", copy.kicker || "Próximo compromisso"));
+  node.append(title);
+  if (copy.text) node.append(el("p", "calendar-next-summary__text", copy.text));
 }
 
 function renderSummary() {
@@ -337,6 +346,10 @@ function appendEventIcon(node, categoria) {
 }
 
 function appendCellPreview(host, items, isNext = false) {
+  if (isMobileLayout()) {
+    appendMobileCellMarks(host, items);
+    return;
+  }
   const preview = cellPreview(items);
   if (preview.mode === "empty") return;
   preview.lines.forEach((line) => {
@@ -361,6 +374,15 @@ function appendCellPreview(host, items, isNext = false) {
     if (isNext && isSession) host.append(el("span", "calendar-event-badge", "Próxima"));
   });
   if (preview.more) host.append(el("span", "cal-more", preview.label));
+}
+
+function appendMobileCellMarks(host, items) {
+  const compact = cellMobilePreview(items);
+  if (compact.mode === "empty") return;
+  const mark = el("span", `calendar-day__mark calendar-day__mark--${compact.mode}`);
+  mark.setAttribute("aria-hidden", "true");
+  mark.textContent = compact.text;
+  host.append(mark);
 }
 
 function renderAgenda() {
@@ -396,11 +418,16 @@ function renderDay() {
   if (!items.length) {
     const next = findNextSessionItem(cache, nextSessionAnchor(view, selectedDay));
     const copy = nextSessionCardCopy(next, { isNext: true });
+    const wrap = el("div", "day-agenda-empty-card");
+    wrap.append(el("h2", "day-agenda-empty", emptyDayCopy()));
     if (!copy) {
-      node.replaceChildren(renderQuietAgendaCard());
+      wrap.append(renderQuietAgendaCard());
+      node.replaceChildren(wrap);
       return;
     }
-    node.replaceChildren(renderNextSessionCard(copy));
+    wrap.append(el("p", "day-agenda-next-kicker", emptyDayNextHeading()));
+    wrap.append(renderNextSessionCard(copy));
+    node.replaceChildren(wrap);
     return;
   }
   const onlySession = items.length === 1 && items[0].categoria === "sessao";

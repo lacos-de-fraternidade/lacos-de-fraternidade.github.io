@@ -129,6 +129,8 @@ Alinhe os dois valores. Recomendação inicial: **3600 segundos (1 hora)** nos d
 
 A sessão do convite (Auth) é a fonte que permite abrir `/area-restrita/ativar/`. A tabela é a fonte que a Edge Function `ativar-conta` consulta.
 
+O e-mail **não** aponta para `/auth/v1/verify`. Ele abre o site da Loja com `token_hash`. A página só consome o token quando o irmão clica em **Continuar a ativação**, para o Gmail não gastar o link sozinho.
+
 ## Recuperação de senha
 
 - A resposta é idêntica para CIM existente, inexistente, inativa ou limitada.

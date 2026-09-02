@@ -147,6 +147,8 @@ test("recuperação responde igual e a redefinição usa updateUser do Auth", ()
   const recovery = read("supabase/functions/recuperar-senha-cim/index.ts");
   assert.equal(recovery.includes("GENERIC_RECOVERY_MESSAGE"), true);
   assert.equal(recovery.includes("member.email"), true);
+  assert.equal(recovery.includes("auth.admin.resetPasswordForEmail"), false);
+  assert.equal(recovery.includes("resetPasswordForEmail"), true);
   assert.equal((recovery.match(/return jsonResponse\(req, 200, \{ ok: true, message: GENERIC_RECOVERY_MESSAGE \}\)/g) || []).length >= 1, true);
   assert.equal(recovery.includes("max_recuperacoes_cim"), true);
   assert.equal(recovery.includes("max_recuperacoes_ip"), true);

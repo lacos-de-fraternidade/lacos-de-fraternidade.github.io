@@ -14,9 +14,16 @@
   <body class="area-body">
     <main class="auth-shell">
       <section class="auth-card">
-        <p class="eyebrow">Segurança</p>
-        <h1>Nova senha</h1>
-        <form id="redefinir-form">
+        <div id="redefinir-gate">
+          <p class="eyebrow">Segurança</p>
+          <h1>Redefinir senha</h1>
+          <p>Por segurança, o link só é validado quando você clica no botão abaixo. Assim o e-mail não gasta o link sozinho.</p>
+          <p class="status" id="gate-status" role="status" aria-live="polite"></p>
+          <button class="button button-primary" id="redefinir-continuar-btn" type="button" hidden>Continuar a redefinição</button>
+        </div>
+        <form id="redefinir-form" hidden>
+          <p class="eyebrow">Segurança</p>
+          <h1>Nova senha</h1>
           <div class="field">
             <label for="senha">Nova senha</label>
             <div class="password-field">

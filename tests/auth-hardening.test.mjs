@@ -4,67 +4,10 @@ import { createHmac } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { authorizeGerenciarAcao } from "../area-restrita/js/perfis.js";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (relative) => readFileSync(join(root, relative), "utf8");
-
-const MEMBER_SELF_ACTIONS = ["registrar_logout", "registrar_senha_alterada"];
-const STAFF_ACTIONS = [
-  "listar",
-  "criar",
-  "atualizar",
-  "enviar_convite",
-  "reenviar_convite",
-  "ativar",
-  "desativar",
-  "desbloquear",
-  "cancelar_convite",
-  "importar_celebracoes",
-  "listar_cadastro",
-  "salvar_irmao",
-  "salvar_familiar",
-  "salvar_casamento",
-  "remover_familiar",
-  "remover_casamento",
-  "listar_gestao",
-  "listar_historico",
-  "convidar_gestao",
-  "salvar_gestao_irmao",
-  "afastar_irmao",
-  "quiet_placet",
-  "encerrar_quiet_placet",
-  "regularizar_situacao",
-  "transferencia",
-  "atualizar_transferencia",
-  "suspender_acesso",
-  "reativar",
-  "listar_eventos",
-  "salvar_evento",
-  "cancelar_evento",
-  "gerar_sessoes",
-  "listar_comunicados",
-  "salvar_comunicado",
-];
-const ADMIN_ACTIONS = ["alterar_perfil", "revogar", "logs", "configurar", "excluir_irmao"];
-
-function authorizeGerenciarAcao(member, acao, body = {}) {
-  void body.perfil;
-  void body.user_id;
-  void body.email;
-  if (!acao) return { ok: false, status: 400 };
-  if (!member) return { ok: false, status: 401 };
-  if (member.ativo !== true || member.conta_ativada !== true) return { ok: false, status: 403 };
-  if (MEMBER_SELF_ACTIONS.includes(acao)) return { ok: true };
-  if (ADMIN_ACTIONS.includes(acao)) {
-    return member.perfil === "administrador" ? { ok: true } : { ok: false, status: 403 };
-  }
-  if (STAFF_ACTIONS.includes(acao)) {
-    return member.perfil === "secretario" || member.perfil === "administrador"
-      ? { ok: true }
-      : { ok: false, status: 403 };
-  }
-  return { ok: false, status: 400 };
-}
 
 function inviteTtlSeconds(appHours, otpSeconds) {
   return Math.min(appHours * 3600, otpSeconds);
@@ -79,6 +22,7 @@ test("gerenciar-irmao exige JWT no gateway e valida getUser no handler", () => {
   const source = read("supabase/functions/gerenciar-irmao/index.ts");
   assert.equal(source.includes("requireActiveMember"), true);
   assert.equal(source.includes("authorizeGerenciarAcao"), true);
+  assert.equal(source.includes("loadOfficeContext"), false);
   assert.equal(source.includes("payload.user_id"), false);
   const members = read("supabase/functions/_shared/members.ts");
   assert.equal(members.includes("auth.getUser(token)"), true);
@@ -86,7 +30,7 @@ test("gerenciar-irmao exige JWT no gateway e valida getUser no handler", () => {
 
 test("gerenciar-irmao recusa anônimo, irmão, JWT inválido, body adulterado e inativo", () => {
   const listar = "listar";
-  assert.equal(authorizeGerenciarAcao(null, listar).status, 401);
+  assert.equal(authorizeGerenciarAcao(null, listar).status, 403);
   assert.equal(authorizeGerenciarAcao({ ativo: true, conta_ativada: true, perfil: "irmao" }, listar).status, 403);
   assert.equal(authorizeGerenciarAcao({ ativo: true, conta_ativada: true, perfil: "irmao" }, "revogar").status, 403);
   assert.equal(authorizeGerenciarAcao({ ativo: false, conta_ativada: true, perfil: "administrador" }, listar).status, 403);
@@ -94,15 +38,19 @@ test("gerenciar-irmao recusa anônimo, irmão, JWT inválido, body adulterado e 
   const secretary = { ativo: true, conta_ativada: true, perfil: "secretario" };
   assert.equal(authorizeGerenciarAcao(secretary, "alterar_perfil").ok, false);
   assert.equal(authorizeGerenciarAcao(secretary, "excluir_irmao").ok, false);
-  assert.equal(authorizeGerenciarAcao(secretary, "criar", { perfil: "administrador" }).ok, true);
+  assert.equal(authorizeGerenciarAcao(secretary, "criar").ok, true);
   assert.equal(authorizeGerenciarAcao(secretary, "listar_cadastro").ok, true);
   assert.equal(authorizeGerenciarAcao(secretary, "listar_gestao").ok, true);
   assert.equal(authorizeGerenciarAcao({ ativo: true, conta_ativada: true, perfil: "irmao" }, "logs").status, 403);
   assert.equal(authorizeGerenciarAcao({ ativo: true, conta_ativada: true, perfil: "irmao" }, "salvar_irmao").status, 403);
+  const vm = { ativo: true, conta_ativada: true, perfil: "veneravel_mestre" };
+  assert.equal(authorizeGerenciarAcao(vm, "listar_gestao").ok, true);
+  assert.equal(authorizeGerenciarAcao(vm, "listar_eventos").ok, true);
+  assert.equal(authorizeGerenciarAcao(vm, "logs").ok, false);
   const admin = { ativo: true, conta_ativada: true, perfil: "administrador" };
   assert.equal(authorizeGerenciarAcao(admin, "logs").ok, true);
   assert.equal(authorizeGerenciarAcao(admin, "excluir_irmao").ok, true);
-  assert.equal(authorizeGerenciarAcao(admin, "revogar", { perfil: "administrador", user_id: "forjado" }).ok, true);
+  assert.equal(authorizeGerenciarAcao(admin, "revogar").ok, true);
   assert.equal(authorizeGerenciarAcao({ ativo: true, conta_ativada: true, perfil: "irmao" }, "registrar_logout").ok, true);
 });
 

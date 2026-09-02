@@ -52,6 +52,13 @@ import {
   validateQuietPlacet,
   validateTransferencia,
 } from "../js/gestao-irmaos.js";
+import {
+  canAssignCargo,
+  canManageInstitutionalOffices,
+  cargoLabel,
+  isStaffProfile,
+  officeSelectOptions,
+} from "../js/cargos.js";
 
 const EVENT_TYPE_LABELS = {
   sessao_ordinaria: "Sessão ordinária",
@@ -83,6 +90,10 @@ await bootPage("Gestão de Irmãos", async (page) => {
     if (!canSeeMigrationTools(page.profile.perfil)) {
       document.querySelectorAll("[data-tab='ferramentas'], [data-panel='ferramentas']").forEach((node) => node.remove());
       document.querySelector("#tabs [data-dropdown]")?.remove();
+    }
+    if (!isStaffProfile(page.profile.perfil)) {
+      document.querySelectorAll("#tabs [data-tab]:not([data-tab='irmaos']), [data-panel]:not([data-panel='irmaos'])").forEach((node) => node.remove());
+      document.querySelector("#novo-irmao")?.remove();
     }
     bindTabs();
     bindSectionSwitcher();
@@ -269,21 +280,23 @@ async function refresh() {
     renderList();
   }
   try {
-    const [cadastroRes, eventosRes, comunicadosRes] = await Promise.all([
-      staff({ acao: "listar_cadastro" }),
-      staff({ acao: "listar_eventos" }),
-      staff({ acao: "listar_comunicados" }),
-    ]);
-    cadastro = cadastroRes.data || cadastro;
-    eventos = eventosRes.data?.eventos || [];
-    comunicados = comunicadosRes.data?.comunicados || [];
-    ctx.selects?.familiarIrmaoSelect?.setOptions((cadastro.irmaos || []).filter((row) => row.ativo !== false).map((row) => ({ value: row.id, nome: row.nome })));
-    ctx.selects?.irmaoSelect?.setOptions(eligibleIrmaos(cadastro).map((row) => ({ value: row.id, nome: row.nome })));
-    syncConjuge();
-    renderFamiliares();
-    renderCasamentos();
-    renderEventos();
-    renderComunicados();
+    if (isStaffProfile(ctx.profile.perfil)) {
+      const [cadastroRes, eventosRes, comunicadosRes] = await Promise.all([
+        staff({ acao: "listar_cadastro" }),
+        staff({ acao: "listar_eventos" }),
+        staff({ acao: "listar_comunicados" }),
+      ]);
+      cadastro = cadastroRes.data || cadastro;
+      eventos = eventosRes.data?.eventos || [];
+      comunicados = comunicadosRes.data?.comunicados || [];
+      ctx.selects?.familiarIrmaoSelect?.setOptions((cadastro.irmaos || []).filter((row) => row.ativo !== false).map((row) => ({ value: row.id, nome: row.nome })));
+      ctx.selects?.irmaoSelect?.setOptions(eligibleIrmaos(cadastro).map((row) => ({ value: row.id, nome: row.nome })));
+      syncConjuge();
+      renderFamiliares();
+      renderCasamentos();
+      renderEventos();
+      renderComunicados();
+    }
   } catch {
     // A lista de Irmãos já foi resolvida acima.
   }
@@ -350,6 +363,9 @@ function renderList() {
   if (alerts.length) {
     root.append(el("p", "warning-note", `Há ${alerts.length} quiet placet(s) com término previsto vencido. A Secretaria deve reavaliar o retorno.`));
   }
+  if (!irmaos.some((row) => row.cargo_institucional === "veneravel_mestre")) {
+    root.append(el("p", "muted", "Sem Venerável Mestre vigente"));
+  }
   if (!rows.length) {
     const empty = el("div", "irmaos-state");
     empty.append(
@@ -379,6 +395,7 @@ function renderBrotherRow(row) {
   identity.append(el("strong", "person-name", displayPersonName(row.nome)));
   const grau = grauLabel(row);
   if (grau) identity.append(el("p", "irmaos-grau", grau));
+  if (row.cargo_institucional) identity.append(el("p", "irmaos-cargo", cargoLabel(row.cargo_institucional)));
   identity.append(el("p", "irmaos-cim", cimLabel(row)));
   const situacao = el("div", "irmaos-situacao");
   situacao.append(situacaoMark(row.situacao));
@@ -567,12 +584,16 @@ function collapsibleSection(section, content) {
 
 function ficheSectionContent(id, row, historico) {
   if (id === "institucionais") {
-    return definitionList([
+    const wrap = el("div", "fiche-section__body");
+    wrap.append(definitionList([
       ["Nome", displayPersonName(row.nome)],
       ["CIM", cimLabel(row)],
       ["E-mail", row.email || "—"],
       ["Nascimento", row.dia_nascimento && row.mes_nascimento ? `${String(row.dia_nascimento).padStart(2, "0")}/${String(row.mes_nascimento).padStart(2, "0")}${row.ano_nascimento ? `/${row.ano_nascimento}` : ""}` : "—"],
-    ]);
+      ["Cargo institucional", cargoLabel(row.cargo_institucional)],
+    ]));
+    wrap.append(cargoEditor(row));
+    return wrap;
   }
   if (id === "maconicos") {
     const wrap = el("div", "fiche-section__body");
@@ -612,6 +633,56 @@ function definitionList(rows) {
     details.append(el("dt", "", dt), el("dd", "", dd || "—"));
   });
   return details;
+}
+
+function cargoEditor(row) {
+  const wrap = el("div", "cargo-editor");
+  if (!row?.irmao_id) return wrap;
+  if (!canManageInstitutionalOffices(ctx.profile)) return wrap;
+  const current = row.cargo_institucional || "";
+  if (row.situacao && row.situacao !== "ativo" && !current) {
+    wrap.append(el("p", "muted", "Somente Irmão ativo pode receber cargo institucional."));
+    return wrap;
+  }
+  const field = el("div", "field");
+  const label = document.createElement("label");
+  label.setAttribute("for", `cargo-${row.irmao_id}`);
+  label.textContent = "Definir cargo institucional";
+  const select = document.createElement("select");
+  select.id = `cargo-${row.irmao_id}`;
+  const empty = document.createElement("option");
+  empty.value = "";
+  empty.textContent = "Sem cargo institucional";
+  select.append(empty);
+  officeSelectOptions(ctx.profile, current).forEach((item) => {
+    const option = document.createElement("option");
+    option.value = item.id;
+    option.textContent = item.label;
+    option.disabled = Boolean(item.disabled);
+    select.append(option);
+  });
+  select.value = current;
+  field.append(label, select);
+  wrap.append(field);
+  const actions = el("div", "drawer-actions");
+  actions.append(ghostButton("Atribuir cargo", (button) => {
+    if (!select.value) {
+      showToast({ type: "error", message: "Selecione um cargo institucional." });
+      return;
+    }
+    if (!canAssignCargo(ctx.profile, select.value)) {
+      showToast({ type: "error", message: "Não autorizado." });
+      return;
+    }
+    run({ acao: "atribuir_cargo", irmao_id: row.irmao_id, cargo: select.value }, { button, busyLabel: "Salvando..." });
+  }));
+  if (current && canAssignCargo(ctx.profile, current)) {
+    actions.append(ghostButton("Encerrar cargo", (button) => {
+      run({ acao: "encerrar_cargo", irmao_id: row.irmao_id }, { button, busyLabel: "Encerrando..." });
+    }));
+  }
+  wrap.append(actions);
+  return wrap;
 }
 
 function accessCard(row) {
@@ -658,6 +729,7 @@ function timelineSection(row, historico) {
   items.forEach((item) => {
     const node = el("li", "fiche-timeline__item");
     node.append(el("time", "", formatFicheDate(item.date) || "—"), el("strong", "", item.title));
+    if (item.ator) node.append(el("p", "muted", item.ator));
     if (item.detalhe) node.append(el("p", "muted", item.detalhe));
     list.append(node);
   });

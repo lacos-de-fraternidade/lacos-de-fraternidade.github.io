@@ -205,6 +205,7 @@ export const TRANSFERENCIA_STATUS_LABELS = {
 export const PERFIL_LABELS = {
   irmao: "Irmão",
   secretario: "Secretário",
+  veneravel_mestre: "Venerável Mestre",
   administrador: "Administrador",
 };
 
@@ -269,6 +270,8 @@ export const LOG_LABELS = {
   evento_criado: "Evento criado",
   evento_editado: "Evento editado",
   comunicado_publicado: "Comunicado publicado",
+  cargo_atribuido: "Cargo atribuído",
+  cargo_encerrado: "Cargo encerrado",
 };
 
 export const LOG_ORIGEM_LABELS = {

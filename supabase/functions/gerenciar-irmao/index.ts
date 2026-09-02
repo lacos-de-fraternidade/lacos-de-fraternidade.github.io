@@ -12,6 +12,7 @@ import {
 } from "../_shared/members.ts";
 import { handleCadastro } from "../_shared/cadastro.ts";
 import { handleGestao } from "../_shared/gestao.ts";
+import { handleCargos } from "../_shared/cargos-actions.ts";
 import { authorizeGerenciarAcao, resolveAssignableProfile } from "../_shared/staff-actions.ts";
 
 function maskCim(cim: string) {
@@ -53,6 +54,7 @@ Deno.serve(async (req) => {
   const identity = await requireActiveMember(req);
   if (identity instanceof Response) return identity;
 
+  const supabase = serviceClient();
   const allowed = authorizeGerenciarAcao(identity.member, acao);
   if (!allowed.ok) {
     return jsonResponse(req, allowed.status, { ok: false, error: GENERIC_INVITE_ERROR });
@@ -60,7 +62,6 @@ Deno.serve(async (req) => {
 
   const actorId = identity.user.id;
   const actorPerfil = identity.member.perfil;
-  const supabase = serviceClient();
   const { data: config } = await supabase.from("configuracoes_autenticacao").select("*").eq("id", 1).maybeSingle();
   const expiresAt = inviteExpiresAt(config);
 
@@ -68,6 +69,12 @@ Deno.serve(async (req) => {
     const { data } = await supabase.from("irmaos_autorizados").select("*").order("nome");
     return jsonResponse(req, 200, { ok: true, membros: (data || []).map(publicMember) });
   }
+
+  const cargos = await handleCargos(req, acao, payload, supabase, {
+    userId: actorId,
+    member: identity.member,
+  });
+  if (cargos) return cargos;
 
   const gestao = await handleGestao(req, acao, payload, supabase, {
     userId: actorId,

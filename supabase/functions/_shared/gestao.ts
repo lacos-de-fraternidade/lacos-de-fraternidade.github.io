@@ -59,6 +59,30 @@ function mapDbSaveError(error: { message?: string; details?: string } | null | u
   return "Não foi possível salvar.";
 }
 
+type GestaoClient = {
+  from: (table: string) => any;
+  rpc?: (name: string, args?: Record<string, unknown>) => Promise<{ data: unknown; error: { message?: string } | null }>;
+};
+
+async function applySituacao(
+  supabase: GestaoClient,
+  irmaoId: string,
+  actorId: string,
+  situacao: string,
+  ativo?: boolean,
+) {
+  const { data, error } = await supabase.rpc?.("atualizar_situacao_irmao", {
+    p_irmao_id: irmaoId,
+    p_situacao: situacao,
+    p_actor_auth_user_id: actorId,
+    p_ativo: ativo ?? null,
+  }) || { data: null, error: { message: "rpc_unavailable" } };
+  if (error) return { ok: false as const, error: "Não foi possível atualizar a situação." };
+  const result = data && typeof data === "object" ? data as { ok?: boolean; error?: string } : {};
+  if (!result.ok) return { ok: false as const, error: result.error === "forbidden" ? "Não autorizado." : (result.error || "Não foi possível atualizar a situação.") };
+  return { ok: true as const };
+}
+
 async function historico(
   supabase: { from: (table: string) => any },
   row: { irmao_id?: string | null; acesso_id?: string | null; evento: string; detalhe?: string; criado_por?: string },
@@ -77,6 +101,7 @@ function mergeGestao(
   acessos: Record<string, unknown>[],
   quiet: Record<string, unknown>[],
   transfers: Record<string, unknown>[],
+  cargos: Record<string, unknown>[] = [],
 ) {
   const accessByIrmao = new Map<string, Record<string, unknown>>();
   const orphanAccess: Record<string, unknown>[] = [];
@@ -95,14 +120,18 @@ function mergeGestao(
       transferByIrmao.set(String(row.irmao_id), row);
     }
   }
+  const cargoByIrmao = new Map<string, Record<string, unknown>>();
+  for (const cargo of cargos) {
+    cargoByIrmao.set(String(cargo.irmao_id), cargo);
+  }
   const merged = irmaos.map((irmao) => {
     const acesso = accessByIrmao.get(String(irmao.id));
     const qp = quietByIrmao.get(String(irmao.id));
     const tr = transferByIrmao.get(String(irmao.id));
-    return publicGestao(irmao, acesso, qp, tr);
+    return publicGestao(irmao, acesso, qp, tr, cargoByIrmao.get(String(irmao.id)));
   });
   for (const acesso of orphanAccess) {
-    merged.push(publicGestao(null, acesso, null, null));
+    merged.push(publicGestao(null, acesso, null, null, cargoByIrmao.get(String(acesso.irmao_id || ""))));
   }
   return merged.sort((a, b) => String(a.nome).localeCompare(String(b.nome), "pt-BR"));
 }
@@ -112,6 +141,7 @@ function publicGestao(
   acesso: Record<string, unknown> | null | undefined,
   quiet: Record<string, unknown> | null | undefined,
   transfer: Record<string, unknown> | null | undefined,
+  cargo: Record<string, unknown> | null | undefined = null,
 ) {
   const cim = String(acesso?.cim || irmao?.cim || "");
   return {
@@ -124,6 +154,8 @@ function publicGestao(
     email: acesso?.email || irmao?.email || "",
     situacao: irmao ? String(irmao.situacao || "ativo") : (acesso?.ativo === false ? "inativo" : "ativo"),
     perfil: acesso?.perfil || null,
+    cargo_institucional: cargo?.cargo || null,
+    cargo_inicio_em: cargo?.inicio_em || null,
     ativo: irmao?.ativo !== false,
     conta_ativada: acesso?.conta_ativada === true,
     conta_ativada_em: acesso?.conta_ativada_em || null,
@@ -162,20 +194,21 @@ function publicGestao(
 }
 
 async function loadGestao(supabase: { from: (table: string) => any }) {
-  const [{ data: irmaos }, { data: acessos }, { data: quiet }, { data: transfers }] = await Promise.all([
+  const [{ data: irmaos }, { data: acessos }, { data: quiet }, { data: transfers }, { data: cargos }] = await Promise.all([
     supabase.from("irmaos").select("id, nome, cim, email, situacao, ativo, dia_nascimento, mes_nascimento, ano_nascimento, data_iniciacao, loja_iniciacao, exibir_aniversario, exibir_iniciacao, criado_em").order("nome"),
     supabase.from("irmaos_autorizados").select("*").order("nome"),
     supabase.from("irmaos_quiet_placet").select("*").is("encerrado_em", null),
     supabase.from("irmaos_transferencias").select("*").in("status", ["solicitada", "em_analise", "aprovada"]),
+    supabase.from("irmaos_cargos").select("irmao_id, cargo, inicio_em").is("encerrado_em", null),
   ]);
-  return mergeGestao(irmaos || [], acessos || [], quiet || [], transfers || []);
+  return mergeGestao(irmaos || [], acessos || [], quiet || [], transfers || [], cargos || []);
 }
 
 export async function handleGestao(
   req: Request,
   acao: string,
   payload: Record<string, unknown>,
-  supabase: { from: (table: string) => any; rpc?: (name: string, args?: Record<string, unknown>) => any },
+  supabase: GestaoClient,
   actor: { userId: string; memberId?: string; perfil?: string },
 ) {
   const actorId = actor.userId;
@@ -211,12 +244,26 @@ export async function handleGestao(
     if (!irmaoId) return jsonResponse(req, 400, { ok: false, error: "Informe o Irmão." });
     const { data, error } = await supabase
       .from("irmaos_historico")
-      .select("id, irmao_id, evento, detalhe, criado_em")
+      .select("id, irmao_id, evento, detalhe, criado_em, criado_por")
       .eq("irmao_id", irmaoId)
       .order("criado_em", { ascending: true })
       .limit(80);
     if (error) return jsonResponse(req, 400, { ok: false, error: "Não foi possível carregar o histórico." });
-    return jsonResponse(req, 200, { ok: true, historico: data || [] });
+    const actorIds = [...new Set((data || []).map((row: { criado_por?: string }) => row.criado_por).filter(Boolean))];
+    const names = new Map<string, string>();
+    if (actorIds.length) {
+      const { data: members } = await supabase.from("irmaos_autorizados").select("auth_user_id, nome").in("auth_user_id", actorIds);
+      for (const member of members || []) names.set(String(member.auth_user_id), String(member.nome));
+    }
+    const historico = (data || []).map((row: Record<string, unknown>) => ({
+      id: row.id,
+      irmao_id: row.irmao_id,
+      evento: row.evento,
+      detalhe: row.detalhe,
+      criado_em: row.criado_em,
+      ator: names.get(String(row.criado_por || "")) || (row.criado_por ? "Responsável da Loja" : "Sistema"),
+    }));
+    return jsonResponse(req, 200, { ok: true, historico });
   }
 
   if (acao === "logs") {
@@ -278,6 +325,9 @@ export async function handleGestao(
     }
     const resolved = resolveAssignableProfile(actor.perfil, payload.perfil || "irmao");
     if (!resolved.ok) return jsonResponse(req, 403, { ok: false, error: resolved.error });
+    const nextSituacao = ["ativo", "quiet_placet", "transferencia", "afastado", "inativo", "desligado", "falecido"].includes(String(payload.situacao || ""))
+      ? String(payload.situacao)
+      : "ativo";
     const irmaoRow: Record<string, unknown> = {
       nome,
       email: email || null,
@@ -286,9 +336,6 @@ export async function handleGestao(
       ano_nascimento: birth.year,
       data_iniciacao: iniciacao ?? null,
       loja_iniciacao: String(payload.loja_iniciacao || "").trim() || null,
-      situacao: ["ativo", "quiet_placet", "transferencia", "afastado", "inativo", "desligado", "falecido"].includes(String(payload.situacao || ""))
-        ? String(payload.situacao)
-        : "ativo",
       exibir_aniversario: payload.exibir_aniversario !== false,
       exibir_iniciacao: payload.exibir_iniciacao !== false,
       exibir_idade: false,
@@ -299,16 +346,24 @@ export async function handleGestao(
       const { data: previous } = await supabase.from("irmaos").select("cim, email, situacao").eq("id", irmaoId).maybeSingle();
       const { error } = await supabase.from("irmaos").update(irmaoRow).eq("id", irmaoId);
       if (error) return jsonResponse(req, 400, { ok: false, error: mapDbSaveError(error) });
+      if (previous?.situacao && String(previous.situacao) !== nextSituacao) {
+        const changed = await applySituacao(supabase, irmaoId, actorId, nextSituacao);
+        if (!changed.ok) return jsonResponse(req, 400, { ok: false, error: changed.error });
+      }
       const details = [];
       if (cim && previous?.cim && String(previous.cim) !== cim) details.push("CIM alterada");
       if (email && previous?.email && String(previous.email) !== email) details.push("E-mail alterado");
-      if (irmaoRow.situacao && previous?.situacao && String(previous.situacao) !== irmaoRow.situacao) details.push("Situação alterada");
+      if (previous?.situacao && String(previous.situacao) !== nextSituacao) details.push("Situação alterada");
       await writeAuthLog({ evento: "membro_editado", sucesso: true, req, authUserId: actorId });
       await historico(supabase, { irmao_id: irmaoId, evento: "membro_editado", detalhe: details.join("; ") || undefined, criado_por: actorId });
     } else {
       const { data, error } = await supabase.from("irmaos").insert(irmaoRow).select("id").maybeSingle();
       if (error || !data) return jsonResponse(req, 400, { ok: false, error: mapDbSaveError(error) || "Não foi possível salvar." });
       savedId = data.id;
+      if (nextSituacao !== "ativo") {
+        const changed = await applySituacao(supabase, String(savedId), actorId, nextSituacao);
+        if (!changed.ok) return jsonResponse(req, 400, { ok: false, error: changed.error });
+      }
       await writeAuthLog({ evento: "membro_criado", sucesso: true, req, authUserId: actorId });
       await historico(supabase, { irmao_id: savedId, evento: "membro_criado", criado_por: actorId });
     }
@@ -346,7 +401,8 @@ export async function handleGestao(
       criado_por: actorId,
     });
     if (error) return jsonResponse(req, 400, { ok: false, error: "Não foi possível registrar." });
-    await supabase.from("irmaos").update({ situacao: "quiet_placet" }).eq("id", irmaoId);
+    const situacao = await applySituacao(supabase, irmaoId, actorId, "quiet_placet");
+    if (!situacao.ok) return jsonResponse(req, 400, { ok: false, error: situacao.error });
     if (asBool(payload.suspender_acesso)) {
       const { data: acesso } = await supabase.from("irmaos_autorizados").select("*").eq("irmao_id", irmaoId).maybeSingle();
       if (acesso?.auth_user_id) await revokeMemberAuth(acesso.auth_user_id, true);
@@ -361,7 +417,8 @@ export async function handleGestao(
   if (acao === "encerrar_quiet_placet") {
     const irmaoId = String(payload.irmao_id || "");
     await supabase.from("irmaos_quiet_placet").update({ encerrado_em: new Date().toISOString() }).eq("irmao_id", irmaoId).is("encerrado_em", null);
-    await supabase.from("irmaos").update({ situacao: "ativo" }).eq("id", irmaoId);
+    const situacao = await applySituacao(supabase, irmaoId, actorId, "ativo");
+    if (!situacao.ok) return jsonResponse(req, 400, { ok: false, error: situacao.error });
     await writeAuthLog({ evento: "quiet_placet_encerrado", sucesso: true, req, authUserId: actorId });
     await historico(supabase, { irmao_id: irmaoId, evento: "quiet_placet_encerrado", criado_por: actorId });
     return jsonResponse(req, 200, { ok: true });
@@ -370,8 +427,8 @@ export async function handleGestao(
   if (acao === "regularizar_situacao") {
     const irmaoId = String(payload.irmao_id || "");
     if (!irmaoId) return jsonResponse(req, 400, { ok: false, error: "Informe o Irmão." });
-    const { error } = await supabase.from("irmaos").update({ situacao: "ativo" }).eq("id", irmaoId);
-    if (error) return jsonResponse(req, 400, { ok: false, error: "Não foi possível regularizar." });
+    const situacao = await applySituacao(supabase, irmaoId, actorId, "ativo");
+    if (!situacao.ok) return jsonResponse(req, 400, { ok: false, error: situacao.error });
     await writeAuthLog({ evento: "membro_editado", sucesso: true, req, authUserId: actorId });
     await historico(supabase, { irmao_id: irmaoId, evento: "membro_editado", detalhe: "Regularização", criado_por: actorId });
     return jsonResponse(req, 200, { ok: true });
@@ -380,8 +437,8 @@ export async function handleGestao(
   if (acao === "afastar_irmao") {
     const irmaoId = String(payload.irmao_id || "");
     if (!irmaoId) return jsonResponse(req, 400, { ok: false, error: "Informe o Irmão." });
-    const { error } = await supabase.from("irmaos").update({ situacao: "afastado" }).eq("id", irmaoId);
-    if (error) return jsonResponse(req, 400, { ok: false, error: "Não foi possível registrar o afastamento." });
+    const situacao = await applySituacao(supabase, irmaoId, actorId, "afastado");
+    if (!situacao.ok) return jsonResponse(req, 400, { ok: false, error: situacao.error });
     await writeAuthLog({ evento: "membro_editado", sucesso: true, req, authUserId: actorId });
     await historico(supabase, { irmao_id: irmaoId, evento: "membro_editado", detalhe: "Afastamento", criado_por: actorId });
     return jsonResponse(req, 200, { ok: true });
@@ -435,7 +492,8 @@ export async function handleGestao(
       criado_por: actorId,
     });
     if (error) return jsonResponse(req, 400, { ok: false, error: "Não foi possível registrar." });
-    await supabase.from("irmaos").update({ situacao: "transferencia" }).eq("id", irmaoId);
+    const situacao = await applySituacao(supabase, irmaoId, actorId, "transferencia");
+    if (!situacao.ok) return jsonResponse(req, 400, { ok: false, error: situacao.error });
     await writeAuthLog({ evento: "transferencia_iniciada", sucesso: true, req, authUserId: actorId });
     await historico(supabase, { irmao_id: irmaoId, evento: "transferencia_iniciada", criado_por: actorId });
     return jsonResponse(req, 200, { ok: true });
@@ -460,7 +518,8 @@ export async function handleGestao(
     const { error } = await supabase.from("irmaos_transferencias").update(updates).eq("id", id);
     if (error) return jsonResponse(req, 400, { ok: false, error: "Não foi possível atualizar." });
     if (status === "concluida") {
-      await supabase.from("irmaos").update({ situacao: "transferencia", ativo: false }).eq("id", current.irmao_id);
+      const situacao = await applySituacao(supabase, String(current.irmao_id), actorId, "transferencia", false);
+      if (!situacao.ok) return jsonResponse(req, 400, { ok: false, error: situacao.error });
       const { data: acesso } = await supabase.from("irmaos_autorizados").select("*").eq("irmao_id", current.irmao_id).maybeSingle();
       if (acesso?.auth_user_id) await revokeMemberAuth(acesso.auth_user_id, true);
       if (acesso?.id) {
@@ -469,7 +528,8 @@ export async function handleGestao(
       await writeAuthLog({ evento: "transferencia_concluida", sucesso: true, req, authUserId: actorId, cim: acesso?.cim });
       await historico(supabase, { irmao_id: current.irmao_id, evento: "transferencia_concluida", criado_por: actorId });
     } else if (status === "cancelada") {
-      await supabase.from("irmaos").update({ situacao: "ativo" }).eq("id", current.irmao_id);
+      const situacao = await applySituacao(supabase, String(current.irmao_id), actorId, "ativo");
+      if (!situacao.ok) return jsonResponse(req, 400, { ok: false, error: situacao.error });
     }
     return jsonResponse(req, 200, { ok: true });
   }
@@ -485,7 +545,10 @@ export async function handleGestao(
     } else {
       await revokeMemberAuth(member.auth_user_id, false);
       await supabase.from("irmaos_autorizados").update({ ativo: true }).eq("id", acessoId);
-      if (member.irmao_id) await supabase.from("irmaos").update({ situacao: "ativo", ativo: true }).eq("id", member.irmao_id);
+      if (member.irmao_id) {
+        const situacao = await applySituacao(supabase, String(member.irmao_id), actorId, "ativo", true);
+        if (!situacao.ok) return jsonResponse(req, 400, { ok: false, error: situacao.error });
+      }
       await writeAuthLog({ evento: "membro_editado", sucesso: true, req, authUserId: actorId, cim: member.cim });
     }
     return jsonResponse(req, 200, { ok: true });

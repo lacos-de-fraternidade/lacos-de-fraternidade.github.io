@@ -1,3 +1,5 @@
+import { isAdminProfile, isStaffProfile } from "./perfis.js";
+
 export function memberNavItems(prefix = "") {
   const home = prefix || "./";
   return [
@@ -9,14 +11,15 @@ export function memberNavItems(prefix = "") {
 }
 
 export function adminNavItems(profile, prefix = "") {
-  if (profile?.perfil !== "secretario" && profile?.perfil !== "administrador") return [];
+  const staff = isStaffProfile(profile?.perfil);
+  if (!staff) return [];
   const items = [
     { href: `${prefix}gestao/`, label: "Gestão de Irmãos" },
     { href: `${prefix}gestao/?aba=eventos`, label: "Eventos" },
     { href: `${prefix}gestao/?aba=comunicados`, label: "Comunicados" },
     { href: `${prefix}convites/`, label: "Convites" },
   ];
-  if (profile.perfil === "administrador") {
+  if (isAdminProfile(profile?.perfil)) {
     items.push({ href: `${prefix}logs/`, label: "Logs" });
     items.push({ href: `${prefix}configuracoes/`, label: "Configurações" });
   }

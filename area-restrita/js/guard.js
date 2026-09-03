@@ -1,9 +1,22 @@
 import { areaClient, invokeFunction } from "./client.js";
+import { isAdminProfile, isStaffProfile } from "./perfis.js";
 
 const LOGIN_URL = "/area-restrita/login/";
 const HOME_URL = "/area-restrita/";
 const ADMIN_URL = "/area-restrita/";
 const PUBLIC_ABOUT_URL = "/sobre.html";
+
+async function loadOfficeFields(supabase, profile) {
+  if (!profile?.irmao_id) return { cargo_institucional: null, situacao: null };
+  const [{ data: irmao }, { data: cargo }] = await Promise.all([
+    supabase.from("irmaos").select("situacao").eq("id", profile.irmao_id).maybeSingle(),
+    supabase.from("irmaos_cargos").select("cargo").eq("irmao_id", profile.irmao_id).is("encerrado_em", null).maybeSingle(),
+  ]);
+  return {
+    cargo_institucional: cargo?.cargo || null,
+    situacao: irmao?.situacao || null,
+  };
+}
 
 export async function requireMember(options = {}) {
   const supabase = areaClient();
@@ -22,15 +35,17 @@ export async function requireMember(options = {}) {
     window.location.replace(LOGIN_URL);
     return null;
   }
-  if (options.staff && !["secretario", "administrador"].includes(profile.perfil)) {
+  const office = await loadOfficeFields(supabase, profile);
+  const fullProfile = { ...profile, ...office };
+  if (options.staff && !isStaffProfile(fullProfile.perfil)) {
     window.location.replace(HOME_URL);
     return null;
   }
-  if (options.admin && profile.perfil !== "administrador") {
+  if (options.admin && !isAdminProfile(fullProfile.perfil)) {
     window.location.replace(ADMIN_URL);
     return null;
   }
-  return { supabase, session, profile };
+  return { supabase, session, profile: fullProfile };
 }
 
 export async function signOut(supabase, accessToken) {

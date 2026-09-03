@@ -1,6 +1,7 @@
 import { daysUntil, monthName, padDay, parseIsoDate, startOfLocalDay } from "./datas.js";
 import { isoToBr } from "./dates-br.js";
 import { PERFIL_LABELS, SITUACAO_LABELS } from "./comunicados.js";
+import { cargoLabel } from "./cargos.js";
 import { formatSessionTime, isActiveEvent, isLodgeSessionType, LODGE_NAME, sessionTitle } from "./sessoes.js";
 import { displayLodgeName, displayPersonName, firstGivenName } from "./vinculo.js";
 
@@ -208,7 +209,7 @@ export function buildProfileView({ profile, irmao = null, eventos = [], from = n
       { icon: "irmao", label: "Nome completo", value: displayPersonName(irmao?.nome || profile?.nome) },
       { icon: "loja", label: "Loja", value: LODGE_NAME },
       { icon: "loja", label: "Situação", value: situacaoLabel(irmao?.situacao || (profile?.ativo ? "ativo" : "inativo")) },
-      { icon: "irmao", label: "Cargo", value: roleLabel(profile?.perfil) },
+      { icon: "irmao", label: "Cargo", value: cargoLabel(irmao?.cargo_institucional || profile?.cargo_institucional) },
     ],
     dates: [
       {

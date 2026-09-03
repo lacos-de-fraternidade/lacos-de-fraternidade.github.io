@@ -129,7 +129,8 @@ test("validação do cadastro usa português e não exige CIM", () => {
 
 test("perfil e Loja do modal respeitam a regra institucional", () => {
   assert.equal(DEFAULT_LOJA_INICIACAO, "ARLS Laços de Fraternidade 357 nº 251");
-  assert.deepEqual(assignableProfiles("administrador"), ["irmao", "secretario", "administrador"]);
+  assert.deepEqual(assignableProfiles("administrador"), ["irmao", "secretario", "veneravel_mestre", "administrador"]);
+  assert.deepEqual(assignableProfiles("veneravel_mestre"), ["irmao", "secretario"]);
   assert.deepEqual(assignableProfiles("secretario"), ["irmao", "secretario"]);
   assert.equal(resolveAssignableProfile("administrador", "secretario").ok, true);
   assert.equal(resolveAssignableProfile("secretario", "administrador").ok, false);
@@ -248,7 +249,7 @@ test("configurar acesso distingue cadastro incompleto, convite e conta ativa", (
   assert.equal(accessDialogModel(blocked, "secretario", from).panel.title, "Conta bloqueada");
   assert.equal(accessDialogModel(active, "secretario", from).canRevoke, false);
   assert.deepEqual(accessDialogModel(ready, "secretario", from).profiles, ["irmao", "secretario"]);
-  assert.deepEqual(accessDialogModel(ready, "administrador", from).profiles, ["irmao", "secretario", "administrador"]);
+  assert.deepEqual(accessDialogModel(ready, "administrador", from).profiles, ["irmao", "secretario", "veneravel_mestre", "administrador"]);
   assert.equal(resolveAssignableProfile("secretario", "administrador").ok, false);
   assert.equal(profileSelectOptions("secretario", "administrador").some((item) => item.id === "administrador" && item.disabled), true);
   assert.equal(profileSelectOptions("secretario", "irmao").some((item) => item.id === "administrador"), false);

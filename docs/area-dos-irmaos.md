@@ -47,7 +47,7 @@ Trocar o pepper invalida hashes anteriores (esperado).
 2. `auth.getUser(token)` com cliente **não** administrativo
 3. perfil lido em `irmaos_autorizados` por `auth_user_id`
 4. `ativo = true` e `conta_ativada = true`
-5. ação permitida conforme `irmao` / `secretario` / `administrador`
+5. ação permitida conforme `irmao` / `secretario` / `veneravel_mestre` / `administrador`
 
 O frontend não envia `user_id`, perfil de ator ou e-mail para autorização. Valores no body (por exemplo `perfil` ao cadastrar) nunca substituem o perfil do JWT.
 
@@ -93,7 +93,7 @@ O uso do endpoint é registrado em `logs_autenticacao` (`bootstrap_utilizado`), 
 
 ## Cadastrar um Irmão e liberar o acesso
 
-1. Acesse `/area-restrita/gestao/` como secretário ou administrador.
+1. Acesse `/area-restrita/gestao/` como Secretaria, Venerável Mestre ou Administrador.
 2. Use **+ Novo Irmão**.
 3. Informe o nome. CIM e e-mail são opcionais até o momento de criar o acesso.
 4. No detalhe do Irmão, abra **Configurar acesso**.
@@ -102,7 +102,7 @@ O uso do endpoint é registrado em `logs_autenticacao` (`bootstrap_utilizado`), 
 
 O Irmão recebe o e-mail, confirma a CIM, cria a senha e vê a confirmação de sucesso antes de entrar em `/area-restrita/login/`.
 
-Perfis internos: `irmao`, `secretario`, `administrador`. Secretaria pode atribuir Irmão e Secretaria. Só Administrador concede ou remove Administrador. A autorização não fica em `user_metadata`.
+Perfis internos: `irmao`, `secretario`, `veneravel_mestre`, `administrador`. Secretaria e Venerável podem atribuir Irmão e Secretaria. Só Administrador concede Venerável Mestre ou Administrador. A autorização não fica em `user_metadata` nem no cargo institucional.
 
 As rotas antigas `/area-restrita/administracao/` e `/area-restrita/celebracoes/` redirecionam para a Gestão de Irmãos.
 
@@ -128,6 +128,8 @@ Há duas janelas, e **as duas precisam ser válidas** na ativação:
 Alinhe os dois valores. Recomendação inicial: **3600 segundos (1 hora)** nos dois lados, que é o padrão conservador do Auth. Se quiser convites de 24 h, aumente **os dois**.
 
 A sessão do convite (Auth) é a fonte que permite abrir `/area-restrita/ativar/`. A tabela é a fonte que a Edge Function `ativar-conta` consulta.
+
+O e-mail **não** aponta para `/auth/v1/verify`. Ele abre o site da Loja com `token_hash`. A página só consome o token quando o irmão clica em **Continuar a ativação**, para o Gmail não gastar o link sozinho.
 
 ## Recuperação de senha
 
@@ -174,6 +176,15 @@ O sentido inverso (`irmaos.auth_member_id`) permanece e é sincronizado por trig
 | --- | --- |
 | `irmaos_autorizados` | Acesso: CIM, e-mail, senha no Auth, perfil, `irmao_id` |
 | `irmaos` / `familiares` / `casamentos` | Celebrações institucionais. Um Irmão pode existir aqui sem login |
+| `irmaos_cargos` | Cargo institucional vigente (`encerrado_em is null`) e histórico de mandatos |
+
+Perfil de acesso e cargo institucional são entidades independentes.
+
+Perfis do portal (`irmaos_autorizados.perfil`): `irmao`, `secretario`, `veneravel_mestre`, `administrador`. O perfil responde o que o usuário pode fazer no portal. `veneravel_mestre` herda as permissões operacionais de `secretario` (Gestão de Irmãos, convites, eventos, comunicados) e não recebe poderes técnicos exclusivos de `administrador`. Cargo institucional **não** concede perfil nem staff.
+
+Cargos da Loja (`irmaos_cargos`): catálogo de 17 cargos, no máximo um vigente por Irmão e um ocupante vigente por cargo. O Venerável Mestre institucional é a linha `cargo = 'veneravel_mestre'` com `encerrado_em is null` em Irmão `situacao = 'ativo'`. Pode existir sem conta no portal. A Loja pode ficar sem Venerável. Não há sucessão automática. A atribuição **não** altera `perfil`. Somente Administrador atribui, encerra ou substitui o cargo institucional `veneravel_mestre`. Secretaria e o perfil Venerável gerem os demais cargos. Se o ocupante deixa de estar `ativo`, um trigger encerra o mandato na mesma transação da mudança de situação.
+
+Meu Perfil exibe os dois campos separados, mesmo quando o rótulo humano coincide (“Venerável Mestre”).
 
 A Secretaria pode preencher `irmao_id` uma vez. A carga GLMERJ também tenta casar por **nome normalizado exato** e, em seguida, por **CIM**. Nomes parciais (ex.: “Paulo Henrique Braga” versus “PAULO HENRIQUE BRAGA DA SILVA”) não casam sozinhos.
 
@@ -212,7 +223,7 @@ O calendário e o card **Próxima sessão** leem esses registros publicados e at
 
 ## Comunicados e mensalidade
 
-Secretário e administrador cadastram comunicados em Gestão → Comunicados.
+Secretaria, Venerável Mestre e Administrador cadastram comunicados em Gestão → Comunicados.
 
 Prioridade no dashboard:
 
@@ -258,6 +269,7 @@ Ordem local (arquivos em `supabase/migrations/`):
 9. `202608210001_gestao_sessoes_comunicados.sql`
 10. `202608210002_gerar_sessoes_service_role.sql`
 11. `202608220001_datas_institucionais.sql`
+12. `202608230001_cargos_institucionais.sql`
 
 A operação pontual de vínculo de CIMs oficiais **não fica no repositório** (dados pessoais). A cópia local, se existir, está em arquivos ignorados pelo Git. No projeto remoto essa operação já foi aplicada uma vez.
 

@@ -94,6 +94,8 @@ test("visão do perfil preenche os quatro cards e as estatísticas", () => {
   });
   assert.equal(view.identity.initials, "PH");
   assert.equal(view.identity.role, "Administrador");
+  assert.equal(view.account[1].value, "Administrador");
+  assert.equal(view.institutional.find((item) => item.label === "Cargo").value, "Sem cargo institucional");
   assert.equal(view.identity.status, "Conta ativa");
   assert.equal(view.account[2].value, "12••••78");
   assert.match(view.dates[2].value, /caminhada/);

@@ -82,5 +82,5 @@ await bootPage("Gerenciar membros", async (ctx) => {
 }, { staff: true });
 
 function labelPerfil(perfil) {
-  return { irmao: "Irmão", secretario: "Secretário", administrador: "Administrador" }[perfil] || perfil;
+  return { irmao: "Irmão", secretario: "Secretário", veneravel_mestre: "Venerável Mestre", administrador: "Administrador" }[perfil] || perfil;
 }

@@ -14,9 +14,17 @@
   <body class="area-body">
     <main class="auth-shell">
       <section class="auth-card auth-card--activate">
-        <div id="ativar-form-view">
+        <div id="ativar-gate">
           <p class="eyebrow">Convite</p>
           <h1>Bem-vindo à Área dos Irmãos</h1>
+          <p class="auth-card__lede">Convite enviado pela<br /><strong>ARLS Laços de Fraternidade 357 nº 251</strong></p>
+          <p>Por segurança, o convite só é validado quando você clica no botão abaixo. Assim o e-mail não gasta o link sozinho.</p>
+          <p class="status" id="gate-status" role="status" aria-live="polite"></p>
+          <button class="button button-primary" id="ativar-continuar-btn" type="button" hidden>Continuar a ativação</button>
+        </div>
+        <div id="ativar-form-view" hidden>
+          <p class="eyebrow">Convite</p>
+          <h1>Crie sua senha</h1>
           <p class="auth-card__lede">Convite enviado pela<br /><strong>ARLS Laços de Fraternidade 357 nº 251</strong></p>
           <p>Confirme sua CIM e crie uma senha pessoal. Este convite é individual e intransferível.</p>
           <form id="ativar-form" novalidate>

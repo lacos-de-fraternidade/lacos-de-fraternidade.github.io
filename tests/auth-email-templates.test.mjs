@@ -19,7 +19,8 @@ test("o convite e a recuperação usam a identidade do e-mail institucional", ()
     assert.match(html, /#123a74/);
     assert.match(html, /#06142d/);
     assert.match(html, /https:\/\/lacos-de-fraternidade\.github\.io\/assets\/logo-classica\.jpg/);
-    assert.match(html, /\{\{ \.ConfirmationURL \}\}/);
+    assert.match(html, /\{\{ \.RedirectTo \}\}\?token_hash=\{\{ \.TokenHash \}\}/);
+    assert.doesNotMatch(html, /\{\{ \.ConfirmationURL \}\}/);
     assert.doesNotMatch(html, /You've been invited|Accept invitation|Supabase|localhost/);
     assert.doesNotMatch(html, /token bruto|CIM completa/i);
   }
@@ -35,6 +36,9 @@ test("os assuntos e o conteúdo do convite estão em português", () => {
   assert.match(invite, /Você foi cadastrado pela Secretaria/);
   assert.match(invite, /preheader|convidado pela Secretaria/i);
   assert.match(invite, /Se o botão não funcionar/);
+  assert.match(invite, /type=invite/);
+  assert.match(invite, /Na próxima tela, clique em continuar/);
   assert.match(recovery, /Redefina sua senha/);
   assert.match(recovery, /Redefinir minha senha/);
+  assert.match(recovery, /type=recovery/);
 });

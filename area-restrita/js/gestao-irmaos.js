@@ -2,12 +2,16 @@ import { isValidCim, normalizeCim } from "./cim.js";
 import { brToIso, formatBirthInput, isFutureIsoDate, parseFlexibleBrDate } from "./dates-br.js";
 import { filterBrothers, LOG_LABELS, PERFIL_LABELS, SITUACAO_LABELS } from "./comunicados.js";
 import { LODGE_NAME } from "./sessoes.js";
+import { assignableProfiles, isStaffProfile, resolveAssignableProfile } from "./perfis.js";
+
+export { assignableProfiles, resolveAssignableProfile };
 
 export const DEFAULT_LOJA_INICIACAO = LODGE_NAME;
 
 export const MODAL_PROFILE_LABELS = {
   irmao: "Irmão",
   secretario: "Secretaria",
+  veneravel_mestre: "Venerável Mestre",
   administrador: "Administrador",
 };
 
@@ -194,11 +198,11 @@ export function canDeleteBrother(row, profile) {
 }
 
 export function ficheActions(row, profile) {
-  const staff = profile?.perfil === "administrador" || profile?.perfil === "secretario";
+  const staff = isStaffProfile(profile?.perfil);
   const actions = [];
-  if (row?.irmao_id) actions.push({ id: "editar_cadastro", label: "Editar cadastro" });
+  if (staff && row?.irmao_id) actions.push({ id: "editar_cadastro", label: "Editar cadastro" });
   if (staff && (row?.irmao_id || row?.acesso_id)) actions.push({ id: "configurar_acesso", label: "Configurar acesso" });
-  if (row?.irmao_id) actions.push({ id: "registrar_movimentacao", label: "Registrar movimentação" });
+  if (staff && row?.irmao_id) actions.push({ id: "registrar_movimentacao", label: "Registrar movimentação" });
   if (canDeleteBrother(row, profile)) actions.push({ id: "excluir_cadastro", label: "Excluir cadastro" });
   return actions;
 }
@@ -221,6 +225,7 @@ export function buildBrotherTimeline(row, historico = []) {
       date: event.criado_em,
       title: event.titulo || LOG_LABELS[event.evento] || event.evento,
       detalhe: event.detalhe || "",
+      ator: event.ator || "",
     });
   }
   return items.sort((a, b) => String(a.date || "").localeCompare(String(b.date || "")));
@@ -228,23 +233,6 @@ export function buildBrotherTimeline(row, historico = []) {
 
 export function memberMenuActions(row, profile) {
   return ficheActions(row, profile);
-}
-
-export function assignableProfiles(actorPerfil) {
-  if (actorPerfil === "administrador") return ["irmao", "secretario", "administrador"];
-  if (actorPerfil === "secretario") return ["irmao", "secretario"];
-  return ["irmao"];
-}
-
-export function resolveAssignableProfile(actorPerfil, requested) {
-  const perfil = String(requested || "irmao").trim() || "irmao";
-  if (!Object.keys(MODAL_PROFILE_LABELS).includes(perfil)) {
-    return { ok: false, error: "Perfil inválido." };
-  }
-  if (!assignableProfiles(actorPerfil).includes(perfil)) {
-    return { ok: false, error: "Perfil não autorizado." };
-  }
-  return { ok: true, perfil };
 }
 
 export function birthPartsFromInput(value) {
@@ -406,10 +394,10 @@ export function profileSelectOptions(actorPerfil, currentPerfil) {
     label: MODAL_PROFILE_LABELS[id],
     disabled: false,
   }));
-  if (currentPerfil === "administrador" && !allowed.includes("administrador")) {
+  if (currentPerfil && !allowed.includes(currentPerfil) && MODAL_PROFILE_LABELS[currentPerfil]) {
     options.push({
-      id: "administrador",
-      label: "Administrador",
+      id: currentPerfil,
+      label: MODAL_PROFILE_LABELS[currentPerfil],
       disabled: true,
       hint: "Apenas Administrador pode conceder ou alterar este perfil.",
     });
@@ -452,6 +440,8 @@ export function actionToastMessage(acao, ok) {
     transferencia: "Transferência registrada com sucesso.",
     suspender_acesso: "Acesso bloqueado com sucesso.",
     alterar_perfil: "Perfil atualizado com sucesso.",
+    atribuir_cargo: "Cargo institucional atualizado com sucesso.",
+    encerrar_cargo: "Cargo institucional encerrado com sucesso.",
     reativar: "Acesso desbloqueado com sucesso.",
     desbloquear: "Acesso desbloqueado com sucesso.",
     revogar: "Acesso revogado com sucesso.",

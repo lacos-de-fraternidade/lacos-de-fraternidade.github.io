@@ -2170,6 +2170,7 @@ body.modal-open { overflow: hidden; }
 .irmaos-identity .person-name { font-size: 0.98rem; }
 .irmaos-cim,
 .irmaos-grau,
+.irmaos-cargo,
 .irmaos-access-label,
 .irmaos-role {
   margin: 2px 0 0;
@@ -2177,7 +2178,8 @@ body.modal-open { overflow: hidden; }
   font-size: 0.82rem;
   font-weight: 400;
 }
-.irmaos-grau {
+.irmaos-grau,
+.irmaos-cargo {
   color: var(--blue-800);
   font-weight: 650;
 }
@@ -2330,6 +2332,8 @@ body.modal-open { overflow: hidden; }
 .fiche-section .profile-grid,
 .fiche-section .access-card,
 .fiche-section .fiche-section__body { padding-bottom: 14px; }
+.cargo-editor { margin-top: 12px; }
+.cargo-editor .drawer-actions { margin-top: 8px; }
 .access-card {
   padding: 14px 16px;
   border: 1px solid var(--line);

@@ -7,6 +7,7 @@ import {
   getAuthPepper,
   hmacPrivate,
   serviceClient,
+  userAuthClient,
   writeAuthLog,
 } from "../_shared/members.ts";
 import { passwordResetUrl } from "../_shared/site-url.ts";
@@ -58,9 +59,13 @@ Deno.serve(async (req) => {
   if (!limited && isValidCim(cim)) {
     const { data: member } = await supabase.from("irmaos_autorizados").select("*").eq("cim", cim).maybeSingle();
     if (member?.ativo && member.conta_ativada && member.email) {
-      await supabase.auth.admin.resetPasswordForEmail(member.email, {
-        redirectTo: passwordResetUrl(String(payload.site_origin || "")),
-      });
+      try {
+        await userAuthClient().auth.resetPasswordForEmail(member.email, {
+          redirectTo: passwordResetUrl(String(payload.site_origin || "")),
+        });
+      } catch {
+        // A falha do mailer não deve vazar se a CIM existe.
+      }
     }
   }
 

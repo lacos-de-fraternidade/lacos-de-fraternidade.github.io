@@ -5,6 +5,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { inspectPassword } from "../area-restrita/js/password.js";
 import { isValidCim, normalizeCim } from "../area-restrita/js/cim.js";
+import { isAdminProfile, isStaffProfile } from "../area-restrita/js/perfis.js";
 
 const GENERIC_LOGIN = "CIM ou senha inválida.";
 const GENERIC_LATER = "Não foi possível realizar o acesso. Verifique os dados informados e tente novamente mais tarde.";
@@ -81,13 +82,13 @@ test("recuperação não distingue CIM válida, inexistente ou inativa", () => {
 });
 
 test("irmão não é staff e anônimo não lê tabela", () => {
-  const canAdmin = (perfil) => perfil === "administrador";
-  const canStaff = (perfil) => perfil === "secretario" || perfil === "administrador";
-  assert.equal(canStaff("irmao"), false);
-  assert.equal(canStaff("secretario"), true);
-  assert.equal(canAdmin("secretario"), false);
-  assert.equal(canAdmin("administrador"), true);
-  assert.equal(canStaff(null), false);
+  assert.equal(isStaffProfile("irmao"), false);
+  assert.equal(isStaffProfile("secretario"), true);
+  assert.equal(isStaffProfile("veneravel_mestre"), true);
+  assert.equal(isAdminProfile("secretario"), false);
+  assert.equal(isAdminProfile("veneravel_mestre"), false);
+  assert.equal(isAdminProfile("administrador"), true);
+  assert.equal(isStaffProfile(null), false);
 });
 
 test("frontend de login não consulta a tabela por CIM", () => {

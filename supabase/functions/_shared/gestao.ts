@@ -52,6 +52,48 @@ function asBool(value: unknown) {
   return value === true;
 }
 
+function normalizeSessionGrau(value: unknown) {
+  if (value === null || value === undefined || value === "") return null;
+  const grau = Number(value);
+  if (![1, 2, 3].includes(grau)) return undefined;
+  return grau;
+}
+
+function normalizeCafeHorario(value: unknown) {
+  if (value === null || value === undefined || value === "") return null;
+  const raw = String(value).trim();
+  const match = raw.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
+  if (!match) return undefined;
+  const hour = Number(match[1]);
+  const minute = Number(match[2]);
+  if (hour > 23 || minute > 59) return undefined;
+  return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}:00`;
+}
+
+function normalizePautaItems(value: unknown) {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item, index) => {
+      const row = item && typeof item === "object" ? item as Record<string, unknown> : { titulo: item };
+      return {
+        titulo: String(row.titulo || row.texto || "").trim(),
+        ordem: Number.isFinite(Number(row.ordem)) ? Number(row.ordem) : index + 1,
+      };
+    })
+    .filter((item) => item.titulo)
+    .sort((a, b) => a.ordem - b.ordem)
+    .map((item, index) => ({ titulo: item.titulo, ordem: index + 1 }));
+}
+
+function sortPauta(items: unknown) {
+  if (!Array.isArray(items)) return [];
+  return [...items].sort((a, b) => {
+    const left = Number((a as { ordem?: number })?.ordem || 0);
+    const right = Number((b as { ordem?: number })?.ordem || 0);
+    return left - right;
+  });
+}
+
 function mapDbSaveError(error: { message?: string; details?: string } | null | undefined) {
   const text = `${error?.message || ""} ${error?.details || ""}`;
   if (/cim/i.test(text) && /unique|duplicate|already/i.test(text)) return "Esta CIM já está vinculada a outro Irmão.";
@@ -555,8 +597,15 @@ export async function handleGestao(
   }
 
   if (acao === "listar_eventos") {
-    const { data } = await supabase.from("eventos_internos").select("*").order("inicia_em");
-    return jsonResponse(req, 200, { ok: true, eventos: data || [] });
+    const { data } = await supabase
+      .from("eventos_internos")
+      .select("*, sessoes_pauta_itens(id, titulo, ordem)")
+      .order("inicia_em");
+    const eventos = (data || []).map((row: Record<string, unknown>) => ({
+      ...row,
+      pauta: sortPauta(row.sessoes_pauta_itens),
+    }));
+    return jsonResponse(req, 200, { ok: true, eventos });
   }
 
   if (acao === "salvar_evento") {
@@ -566,6 +615,12 @@ export async function handleGestao(
     if (!titulo || !inicia) return jsonResponse(req, 400, { ok: false, error: "Informe título e data." });
     const allowed = ["geral", "fundacao", "sessao_ordinaria", "sessao_administrativa", "sessao_magna", "reuniao", "comunicado", "outro"];
     if (!allowed.includes(tipo)) return jsonResponse(req, 400, { ok: false, error: "Tipo inválido." });
+    const grau = normalizeSessionGrau(payload.grau);
+    if (grau === undefined) return jsonResponse(req, 400, { ok: false, error: "Grau inválido." });
+    const cafe = asBool(payload.cafe_fraternal);
+    const cafeHorario = cafe ? normalizeCafeHorario(payload.cafe_horario) : null;
+    if (cafe && cafeHorario === undefined) return jsonResponse(req, 400, { ok: false, error: "Informe um horário de café válido." });
+    const pauta = normalizePautaItems(payload.pauta);
     const row: Record<string, unknown> = {
       titulo,
       descricao: String(payload.descricao || "").trim() || null,
@@ -578,16 +633,30 @@ export async function handleGestao(
       ativo: payload.ativo !== false,
       excepcional: true,
       gerado_automaticamente: false,
+      grau,
+      cafe_fraternal: cafe,
+      cafe_horario: cafeHorario,
       atualizado_em: new Date().toISOString(),
       criado_por: actorId,
     };
     const id = String(payload.id || "");
-    const { error } = id
-      ? await supabase.from("eventos_internos").update(row).eq("id", id)
-      : await supabase.from("eventos_internos").insert(row);
-    if (error) return jsonResponse(req, 400, { ok: false, error: "Não foi possível salvar o evento." });
+    const saved = id
+      ? await supabase.from("eventos_internos").update(row).eq("id", id).select("id").maybeSingle()
+      : await supabase.from("eventos_internos").insert(row).select("id").maybeSingle();
+    if (saved.error || !saved.data?.id) {
+      return jsonResponse(req, 400, { ok: false, error: "Não foi possível salvar o evento." });
+    }
+    const eventoId = String(saved.data.id);
+    const wiped = await supabase.from("sessoes_pauta_itens").delete().eq("evento_id", eventoId);
+    if (wiped.error) return jsonResponse(req, 400, { ok: false, error: "Não foi possível salvar a pauta." });
+    if (pauta.length) {
+      const inserted = await supabase.from("sessoes_pauta_itens").insert(
+        pauta.map((item) => ({ evento_id: eventoId, titulo: item.titulo, ordem: item.ordem })),
+      );
+      if (inserted.error) return jsonResponse(req, 400, { ok: false, error: "Não foi possível salvar a pauta." });
+    }
     await writeAuthLog({ evento: id ? "evento_editado" : "evento_criado", sucesso: true, req, authUserId: actorId });
-    return jsonResponse(req, 200, { ok: true });
+    return jsonResponse(req, 200, { ok: true, id: eventoId });
   }
 
   if (acao === "cancelar_evento") {

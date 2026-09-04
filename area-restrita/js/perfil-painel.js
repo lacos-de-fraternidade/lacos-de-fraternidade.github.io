@@ -2,7 +2,7 @@ import { daysUntil, monthName, padDay, parseIsoDate, startOfLocalDay } from "./d
 import { isoToBr } from "./dates-br.js";
 import { PERFIL_LABELS, SITUACAO_LABELS } from "./comunicados.js";
 import { cargoLabel } from "./cargos.js";
-import { formatSessionTime, isActiveEvent, isLodgeSessionType, LODGE_NAME, sessionTitle } from "./sessoes.js";
+import { formatSessionTime, isActiveEvent, isLodgeSessionType, LODGE_NAME, sessionProgramItems, sessionTitle, sessionTypeLabel } from "./sessoes.js";
 import { displayLodgeName, displayPersonName, firstGivenName } from "./vinculo.js";
 
 const NAME_PARTICLES = new Set(["de", "da", "das", "do", "dos", "e", "del"]);
@@ -128,8 +128,10 @@ export function nextSessionCardCopy(evento) {
     title: "Próxima sessão",
     dateLabel: formatLongDay(evento.when),
     eventLabel: sessionTitle(evento),
+    typeLabel: sessionTypeLabel(evento.tipo_evento || evento.tipo),
     timeLabel: formatSessionTime(evento.when),
     presence: evento.presenca_obrigatoria ? "Presença necessária" : "Presença recomendada",
+    program: sessionProgramItems({ ...evento, categoria: "sessao", pauta: evento.pauta || evento.sessoes_pauta_itens }),
   };
 }
 

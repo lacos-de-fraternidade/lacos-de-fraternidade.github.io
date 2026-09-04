@@ -36,7 +36,7 @@ async function loadOwnIrmao(ctx) {
 async function loadSessions(ctx) {
   const { data } = await ctx.supabase
     .from("eventos_internos")
-    .select("id, titulo, inicia_em, tipo_evento, publicado, ativo, presenca_obrigatoria")
+    .select("id, titulo, inicia_em, tipo_evento, publicado, ativo, presenca_obrigatoria, grau, cafe_fraternal, cafe_horario, sessoes_pauta_itens(id, titulo, ordem)")
     .eq("publicado", true)
     .eq("ativo", true);
   return data || [];
@@ -122,13 +122,19 @@ function renderNextSession(copy) {
     node.replaceChildren(el("p", "profile-highlight__kicker", "Próxima sessão"), el("p", "muted", "Nenhuma sessão futura está publicada no momento."));
     return;
   }
-  node.replaceChildren(
+  const nodes = [
     el("p", "profile-highlight__kicker", copy.title),
     el("p", "profile-highlight__date", copy.dateLabel),
     el("p", "profile-highlight__title", copy.eventLabel),
-    el("p", "profile-highlight__meta", copy.timeLabel),
+    el("p", "profile-highlight__meta", [copy.typeLabel, copy.timeLabel].filter(Boolean).join(" • ")),
     el("p", "profile-highlight__presence", copy.presence),
-  );
+  ];
+  if (copy.program?.length) {
+    const list = el("ul", "next-session-card__list");
+    copy.program.forEach((line) => list.append(el("li", "", line)));
+    nodes.push(list);
+  }
+  node.replaceChildren(...nodes);
 }
 
 function renderBirthday(copy) {

@@ -65,17 +65,78 @@ export function sessionTitle(evento) {
   return evento.titulo || "Sessão Ordinária";
 }
 
-export const ORDINARY_SESSION_PROGRAM = [
-  "Café fraternal às 18h45",
-  "Sessão no grau 1",
-  "Leitura da pauta administrativa",
-];
+export const SESSION_DEGREES = [1, 2, 3];
+
+export function normalizeSessionGrau(value) {
+  if (value === null || value === undefined || value === "") return null;
+  const grau = Number(value);
+  return SESSION_DEGREES.includes(grau) ? grau : undefined;
+}
+
+export function normalizeCafeHorario(value) {
+  if (value === null || value === undefined || value === "") return null;
+  const raw = String(value).trim();
+  const match = raw.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
+  if (!match) return undefined;
+  const hour = Number(match[1]);
+  const minute = Number(match[2]);
+  if (hour > 23 || minute > 59) return undefined;
+  return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+}
+
+export function normalizeCafe(cafe, horario) {
+  const on = cafe === true || cafe === "true" || cafe === 1;
+  if (!on) return { cafe_fraternal: false, cafe_horario: null };
+  const time = normalizeCafeHorario(horario);
+  if (time === undefined) return { cafe_fraternal: true, cafe_horario: undefined };
+  return { cafe_fraternal: true, cafe_horario: time };
+}
+
+export function normalizePautaItems(items) {
+  if (!Array.isArray(items)) return [];
+  return items
+    .map((item, index) => {
+      const row = item && typeof item === "object" ? item : { titulo: item };
+      return {
+        titulo: String(row.titulo || row.texto || "").trim(),
+        ordem: Number.isFinite(Number(row.ordem)) ? Number(row.ordem) : index + 1,
+      };
+    })
+    .filter((item) => item.titulo)
+    .sort((a, b) => a.ordem - b.ordem)
+    .map((item, index) => ({ titulo: item.titulo, ordem: index + 1 }));
+}
+
+export function formatCafeTime(value) {
+  const time = normalizeCafeHorario(value);
+  if (!time) return "";
+  const [hour, minute] = time.split(":");
+  return `${hour}h${minute}`;
+}
+
+export function sessionTypeLabel(tipo) {
+  if (tipo === "sessao_administrativa") return "Sessão administrativa";
+  if (tipo === "sessao_magna") return "Sessão magna";
+  if (tipo === "sessao_ordinaria") return "Sessão ordinária";
+  return "";
+}
 
 export function sessionProgramItems(item) {
-  if (!item || item.categoria !== "sessao") return [];
-  const tipo = item.tipoEvento || item.tipo_evento || "sessao_ordinaria";
-  if (tipo !== "sessao_ordinaria") return [];
-  return ORDINARY_SESSION_PROGRAM;
+  if (!item) return [];
+  if (item.categoria && item.categoria !== "sessao") return [];
+  const lines = [];
+  const cafe = item.cafe_fraternal === true || item.cafeFraternal === true;
+  if (cafe) {
+    const hora = formatCafeTime(item.cafe_horario || item.cafeHorario);
+    lines.push(hora ? `Café fraternal às ${hora}` : "Café fraternal");
+  }
+  const grau = normalizeSessionGrau(item.grau);
+  if (grau) lines.push(`Sessão no grau ${grau}`);
+  const pauta = normalizePautaItems(
+    item.pauta || item.sessoes_pauta_itens || item.programItems || [],
+  );
+  pauta.forEach((entry) => lines.push(entry.titulo));
+  return lines;
 }
 
 export function sessionProgramHeading(isNext = false) {

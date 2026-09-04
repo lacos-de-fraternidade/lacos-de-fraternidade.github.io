@@ -59,6 +59,7 @@ import {
   isStaffProfile,
   officeSelectOptions,
 } from "../js/cargos.js";
+import { normalizeCafe, normalizePautaItems, SESSION_DEGREES } from "../js/sessoes.js";
 
 const EVENT_TYPE_LABELS = {
   sessao_ordinaria: "Sessão ordinária",
@@ -118,9 +119,10 @@ await bootPage("Gestão de Irmãos", async (page) => {
     document.querySelector("#form-novo")?.addEventListener("submit", saveNew);
     document.querySelector("#familiar-form")?.addEventListener("submit", saveFamiliar);
     document.querySelector("#casamento-form")?.addEventListener("submit", saveCasamento);
+    injectSessionAdminFields();
     document.querySelector("#evento-form")?.addEventListener("submit", saveEvento);
     document.querySelector("#comunicado-form")?.addEventListener("submit", saveComunicado);
-    document.querySelector("#evento-descartar")?.addEventListener("click", () => resetForm("#evento-form"));
+    document.querySelector("#evento-descartar")?.addEventListener("click", () => resetEventoForm());
     document.querySelector("#comunicado-descartar")?.addEventListener("click", () => resetForm("#comunicado-form"));
     document.querySelector("#importar")?.addEventListener("click", importCsv);
     ["#novo-nascimento", "#novo-iniciacao", "#casamento-data", "#evento-data", "#comunicado-inicio-data", "#comunicado-fim-data"].forEach((id) => {
@@ -259,6 +261,93 @@ function resetForm(selector) {
   const form = document.querySelector(selector);
   form.reset();
   form.querySelectorAll("input[type=hidden]").forEach((input) => { input.value = ""; });
+}
+
+function resetEventoForm() {
+  resetForm("#evento-form");
+  renderPautaFields([]);
+  syncCafeFields();
+}
+
+function injectSessionAdminFields() {
+  const form = document.querySelector("#evento-form");
+  if (!form || document.querySelector("#evento-grau")) return;
+  const actions = form.querySelector(".form-actions");
+  const extra = document.createElement("div");
+  extra.className = "field-span";
+  extra.innerHTML = `
+    <div class="field"><label for="evento-grau">Grau da sessão</label>
+      <select id="evento-grau">
+        <option value="">Sem grau</option>
+        ${SESSION_DEGREES.map((grau) => `<option value="${grau}">Grau ${grau}</option>`).join("")}
+      </select>
+    </div>
+    <label class="check"><input id="evento-cafe" type="checkbox" /> Haverá café fraternal</label>
+    <div class="field"><label for="evento-cafe-hora">Horário do café</label><input id="evento-cafe-hora" placeholder="hh:mm" /></div>
+    <div class="field field-span">
+      <label>Pauta / Ordem do Dia</label>
+      <div id="evento-pauta" class="record-list"></div>
+      <button class="button button-secondary" type="button" id="evento-pauta-adicionar">Adicionar item</button>
+    </div>
+  `;
+  form.insertBefore(extra, actions);
+  bindBrTimeInput(document.querySelector("#evento-cafe-hora"));
+  document.querySelector("#evento-cafe")?.addEventListener("change", syncCafeFields);
+  document.querySelector("#evento-pauta-adicionar")?.addEventListener("click", () => {
+    renderPautaFields([...readPautaFields(), { titulo: "", ordem: readPautaFields().length + 1 }]);
+  });
+  renderPautaFields([]);
+  syncCafeFields();
+}
+
+function syncCafeFields() {
+  const cafe = document.querySelector("#evento-cafe");
+  const hora = document.querySelector("#evento-cafe-hora");
+  if (!cafe || !hora) return;
+  hora.disabled = !cafe.checked;
+  if (!cafe.checked) hora.value = "";
+}
+
+function readPautaFields() {
+  return [...document.querySelectorAll("#evento-pauta [data-pauta-item]")].map((row, index) => ({
+    titulo: row.querySelector("input")?.value || "",
+    ordem: index + 1,
+  }));
+}
+
+function renderPautaFields(items) {
+  const root = document.querySelector("#evento-pauta");
+  if (!root) return;
+  const rows = items.length ? items : [];
+  root.replaceChildren();
+  rows.forEach((item, index) => {
+    const row = el("div", "record-row");
+    row.dataset.pautaItem = "1";
+    const input = document.createElement("input");
+    input.value = item.titulo || "";
+    input.placeholder = `Item ${index + 1}`;
+    const actions = el("div", "record-actions");
+    const up = ghostButton("Subir", () => movePauta(index, -1));
+    const down = ghostButton("Descer", () => movePauta(index, 1));
+    const remove = ghostButton("Remover", () => {
+      const next = readPautaFields().filter((_, current) => current !== index);
+      renderPautaFields(next);
+    }, "button-danger");
+    up.disabled = index === 0;
+    down.disabled = index === rows.length - 1;
+    actions.append(up, down, remove);
+    row.append(input, actions);
+    root.append(row);
+  });
+}
+
+function movePauta(index, delta) {
+  const items = readPautaFields();
+  const target = index + delta;
+  if (target < 0 || target >= items.length) return;
+  const [moved] = items.splice(index, 1);
+  items.splice(target, 0, moved);
+  renderPautaFields(items);
 }
 
 async function refresh() {
@@ -1474,6 +1563,14 @@ function fillEvento(row) {
   document.querySelector("#evento-descricao").value = row.descricao || "";
   document.querySelector("#evento-presenca").checked = Boolean(row.presenca_obrigatoria);
   document.querySelector("#evento-destaque").checked = Boolean(row.destaque);
+  const grau = document.querySelector("#evento-grau");
+  const cafe = document.querySelector("#evento-cafe");
+  const cafeHora = document.querySelector("#evento-cafe-hora");
+  if (grau) grau.value = row.grau != null ? String(row.grau) : "";
+  if (cafe) cafe.checked = Boolean(row.cafe_fraternal);
+  if (cafeHora) cafeHora.value = String(row.cafe_horario || "").slice(0, 5);
+  renderPautaFields(normalizePautaItems(row.pauta || row.sessoes_pauta_itens || []));
+  syncCafeFields();
   openTab("eventos");
 }
 
@@ -1549,6 +1646,10 @@ async function submitForm(event, button, task, successMessage) {
     }
     event.target.reset();
     event.target.querySelectorAll("input[type=hidden]").forEach((input) => { input.value = ""; });
+    if (event.target.id === "evento-form") {
+      renderPautaFields([]);
+      syncCafeFields();
+    }
     await refresh();
     feedback(true, successMessage);
   } finally {
@@ -1580,6 +1681,15 @@ async function saveCasamento(event) {
 }
 
 async function saveEvento(event) {
+  const cafe = normalizeCafe(
+    document.querySelector("#evento-cafe")?.checked,
+    document.querySelector("#evento-cafe-hora")?.value,
+  );
+  if (cafe.cafe_fraternal && cafe.cafe_horario === undefined) {
+    event.preventDefault();
+    feedback(false, "Informe um horário de café válido.");
+    return;
+  }
   await submitForm(event, event.submitter, () => staff({
     acao: "salvar_evento",
     id: document.querySelector("#evento-id").value || undefined,
@@ -1589,6 +1699,10 @@ async function saveEvento(event) {
     descricao: document.querySelector("#evento-descricao").value,
     presenca_obrigatoria: document.querySelector("#evento-presenca").checked,
     destaque: document.querySelector("#evento-destaque").checked,
+    grau: document.querySelector("#evento-grau")?.value || null,
+    cafe_fraternal: cafe.cafe_fraternal,
+    cafe_horario: cafe.cafe_horario,
+    pauta: normalizePautaItems(readPautaFields()),
   }), "Evento salvo.");
 }
 

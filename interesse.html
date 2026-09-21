@@ -7,7 +7,7 @@
     <meta name="theme-color" content="#123a74" />
     <title>Cadastro do candidato | Laços de Fraternidade</title>
     <link rel="icon" href="assets/logo-classica.jpg" />
-    <link rel="stylesheet" href="styles.css?v=22" />
+    <link rel="stylesheet" href="styles.css?v=30" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css" />
     <script src="config.js?v=8"></script>
   </head>
@@ -80,10 +80,21 @@
           <div class="form-heading">
             <p class="eyebrow">Secretaria</p>
             <h1>Cadastro do candidato</h1>
-            <p>
-              Preencha as seções abaixo com atenção. Campos marcados com * são obrigatórios.
-              Após o envio confirmado, você será direcionado a uma página de confirmação.
-            </p>
+            <p>Preencha seus dados para iniciar o processo de cadastro. Você poderá revisar tudo antes de enviar.</p>
+          </div>
+
+          <div class="form-progress" id="form-progress" aria-label="Progresso do cadastro">
+            <p class="form-progress-kicker" id="form-progress-label">Etapa 1 de 7</p>
+            <p class="form-progress-title" id="form-progress-name">Dados pessoais</p>
+            <ol class="form-progress-dots" aria-hidden="true">
+              <li data-progress="1" class="is-current"></li>
+              <li data-progress="2"></li>
+              <li data-progress="3"></li>
+              <li data-progress="4"></li>
+              <li data-progress="5"></li>
+              <li data-progress="6"></li>
+              <li data-progress="7"></li>
+            </ol>
           </div>
 
           <form id="interest-form" class="interest-form" method="post" action="#" novalidate autocomplete="on" onsubmit="event.preventDefault();">
@@ -92,211 +103,602 @@
               <input id="website" name="website" tabindex="-1" autocomplete="off" />
             </div>
 
-            <fieldset class="form-block">
-              <legend>1. Dados pessoais</legend>
-              <div class="field">
-                <label for="nome">Nome completo *</label>
+            <section class="form-step" data-step="1" aria-labelledby="step-1-title">
+              <fieldset class="form-block">
+                <legend id="step-1-title">1. Dados pessoais</legend>
+                <div class="field">
+                  <label for="nome">Nome completo *</label>
                   <input id="nome" name="nome" type="text" maxlength="120" required autocomplete="name" placeholder="Nome e sobrenome" aria-describedby="nome-error" />
-                <small class="field-error" id="nome-error"></small>
-              </div>
-              <div class="field-row">
-                <div class="field">
-                  <label for="dataNascimento">Data de nascimento *</label>
-                  <div class="date-field">
-                    <div class="date-field-control">
-                      <input
-                        id="dataNascimento"
-                        name="dataNascimento"
-                        type="text"
-                        inputmode="numeric"
-                        maxlength="10"
-                        required
-                        autocomplete="bday"
-                        placeholder="dd/mm/aaaa"
-                        aria-describedby="dataNascimento-hint dataNascimento-error"
-                        data-input
-                      />
-                      <button class="date-field-toggle" type="button" data-toggle aria-label="Abrir calendário">
-                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true">
-                          <rect x="3.5" y="5" width="17" height="15" rx="2" />
-                          <path d="M8 3.5v3M16 3.5v3M3.5 10h17" />
-                        </svg>
-                      </button>
+                  <small class="field-error" id="nome-error"></small>
+                </div>
+                <div class="field-row">
+                  <div class="field">
+                    <label for="dataNascimento">Data de nascimento *</label>
+                    <div class="date-field">
+                      <div class="date-field-control">
+                        <input
+                          id="dataNascimento"
+                          name="dataNascimento"
+                          type="text"
+                          inputmode="numeric"
+                          maxlength="10"
+                          required
+                          autocomplete="bday"
+                          placeholder="dd/mm/aaaa"
+                          aria-describedby="dataNascimento-hint dataNascimento-error"
+                          data-input
+                        />
+                        <button class="date-field-toggle" type="button" data-toggle aria-label="Abrir calendário">
+                          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true">
+                            <rect x="3.5" y="5" width="17" height="15" rx="2" />
+                            <path d="M8 3.5v3M16 3.5v3M3.5 10h17" />
+                          </svg>
+                        </button>
+                      </div>
                     </div>
+                    <p class="field-note" id="dataNascimento-hint">
+                      <span class="field-note-icon" aria-hidden="true">i</span>
+                      <span id="dataNascimento-hint-text">Para o Cadastro do candidato, a idade mínima é de 21 anos.</span>
+                    </p>
+                    <small class="field-error" id="dataNascimento-error"></small>
                   </div>
-                  <p class="field-note" id="dataNascimento-hint">
-                    <span class="field-note-icon" aria-hidden="true">i</span>
-                    <span id="dataNascimento-hint-text">Para o Cadastro do candidato, a idade mínima é de 21 anos.</span>
-                  </p>
-                  <small class="field-error" id="dataNascimento-error"></small>
+                  <div class="field">
+                    <label for="cpf">CPF *</label>
+                    <input id="cpf" name="cpf" type="text" inputmode="numeric" maxlength="14" required autocomplete="off" placeholder="000.000.000-00" aria-describedby="cpf-error" />
+                    <small class="field-error" id="cpf-error"></small>
+                  </div>
+                </div>
+                <div class="field-row">
+                  <div class="field">
+                    <label for="rg">RG *</label>
+                    <input id="rg" name="rg" type="text" maxlength="20" required autocomplete="off" />
+                    <small class="field-error" id="rg-error"></small>
+                  </div>
+                  <div class="field">
+                    <label for="rgOrgao">Órgão expedidor *</label>
+                    <input id="rgOrgao" name="rgOrgao" type="text" maxlength="20" required autocomplete="off" placeholder="Ex.: IFP-RJ" />
+                    <small class="field-error" id="rgOrgao-error"></small>
+                  </div>
                 </div>
                 <div class="field">
-                  <label for="cpf">CPF *</label>
-                  <input id="cpf" name="cpf" type="text" inputmode="numeric" maxlength="14" required autocomplete="off" placeholder="000.000.000-00" aria-describedby="cpf-error" />
-                  <small class="field-error" id="cpf-error"></small>
-                </div>
-              </div>
-              <div class="field">
-                <label for="estadoCivil">Estado civil *</label>
-                <select id="estadoCivil" name="estadoCivil" required>
-                  <option value="">Selecione</option>
-                  <option value="solteiro">Solteiro</option>
-                  <option value="casado">Casado</option>
-                  <option value="divorciado">Divorciado</option>
-                  <option value="viuvo">Viúvo</option>
-                  <option value="uniao_estavel">União estável</option>
-                  <option value="outro">Outro</option>
-                </select>
-                <small class="field-error" id="estadoCivil-error"></small>
-              </div>
-
-              <div id="bloco-conjuge" class="conditional" hidden>
-                <div class="field">
-                  <label for="esposaNome">Nome completo da esposa ou companheira *</label>
-                  <input id="esposaNome" name="esposaNome" type="text" maxlength="120" autocomplete="off" />
-                  <small class="field-error" id="esposaNome-error"></small>
+                  <label for="rgExpedicao">Data de expedição do RG *</label>
+                  <input id="rgExpedicao" name="rgExpedicao" class="date-mask" type="text" inputmode="numeric" maxlength="10" placeholder="dd/mm/aaaa" />
+                  <small class="field-error" id="rgExpedicao-error"></small>
                 </div>
                 <div class="field">
-                  <label for="esposaWhatsapp">WhatsApp da esposa ou companheira *</label>
-                  <input id="esposaWhatsapp" name="esposaWhatsapp" type="tel" inputmode="numeric" maxlength="16" autocomplete="off" placeholder="(00) 00000-0000" />
-                  <small class="field-error" id="esposaWhatsapp-error"></small>
-                </div>
-                <div class="field consent-field">
-                  <label class="consent" for="consentimentoEsposa">
-                    <input id="consentimentoEsposa" name="consentimentoEsposa" type="checkbox" />
-                    <span>Estou ciente de que o consentimento da esposa ou companheira será necessário para o prosseguimento do processo.</span>
-                  </label>
-                  <small class="field-error" id="consentimentoEsposa-error"></small>
-                </div>
-              </div>
-
-              <div id="bloco-mae" class="conditional" hidden>
-                <div class="field">
-                  <label for="maeNome">Nome completo da mãe *</label>
-                  <input id="maeNome" name="maeNome" type="text" maxlength="120" autocomplete="off" />
-                  <small class="field-error" id="maeNome-error"></small>
+                  <label for="nomeMae">Nome da mãe *</label>
+                  <input id="nomeMae" name="nomeMae" type="text" maxlength="120" required autocomplete="off" />
+                  <small class="field-error" id="nomeMae-error"></small>
                 </div>
                 <div class="field">
-                  <label for="maeWhatsapp">WhatsApp da mãe *</label>
-                  <input id="maeWhatsapp" name="maeWhatsapp" type="tel" inputmode="numeric" maxlength="16" autocomplete="off" placeholder="(00) 00000-0000" />
-                  <small class="field-error" id="maeWhatsapp-error"></small>
+                  <label for="nomePai">Nome do pai</label>
+                  <input id="nomePai" name="nomePai" type="text" maxlength="120" autocomplete="off" />
+                  <small class="field-error" id="nomePai-error"></small>
                 </div>
-                <div class="field consent-field">
-                  <label class="consent" for="consentimentoMae">
-                    <input id="consentimentoMae" name="consentimentoMae" type="checkbox" />
-                    <span>Estou ciente de que o consentimento da mãe será necessário para o prosseguimento do processo.</span>
-                  </label>
-                  <small class="field-error" id="consentimentoMae-error"></small>
-                </div>
-              </div>
-
-              <div id="bloco-outro" class="conditional" hidden>
-                <div class="field">
-                  <label for="situacaoFamiliar">Situação familiar *</label>
-                  <textarea id="situacaoFamiliar" name="situacaoFamiliar" rows="3" maxlength="400" placeholder="Descreva brevemente sua situação familiar."></textarea>
-                  <small class="field-error" id="situacaoFamiliar-error"></small>
-                </div>
-              </div>
-            </fieldset>
-
-            <fieldset class="form-block">
-              <legend>2. Dados de contato</legend>
-              <div class="field">
-                <label for="whatsapp">WhatsApp *</label>
-                <input id="whatsapp" name="whatsapp" type="tel" inputmode="numeric" maxlength="16" required autocomplete="tel" placeholder="(00) 00000-0000" aria-describedby="whatsapp-hint whatsapp-error" />
-                <small class="field-hint" id="whatsapp-hint">Informe um número de WhatsApp com DDD. Esse será o principal canal utilizado para o contato sobre as próximas etapas.</small>
-                <small class="field-error" id="whatsapp-error"></small>
-              </div>
-              <div class="field-row">
-                <div class="field">
-                  <label for="email">E-mail *</label>
-                  <input id="email" name="email" type="email" required autocomplete="email" placeholder="nome@exemplo.com" aria-describedby="email-error" />
-                  <small class="field-error" id="email-error"></small>
+                <div class="field-row">
+                  <div class="field">
+                    <label for="naturalidade">Naturalidade *</label>
+                    <input id="naturalidade" name="naturalidade" type="text" maxlength="80" required />
+                    <small class="field-error" id="naturalidade-error"></small>
+                  </div>
+                  <div class="field">
+                    <label for="nacionalidade">Nacionalidade *</label>
+                    <input id="nacionalidade" name="nacionalidade" type="text" maxlength="80" required value="Brasileira" />
+                    <small class="field-error" id="nacionalidade-error"></small>
+                  </div>
                 </div>
                 <div class="field">
-                  <label for="emailConfirmacao">Confirme o e-mail *</label>
-                  <input id="emailConfirmacao" name="emailConfirmacao" type="email" required autocomplete="email" placeholder="Repita o e-mail" aria-describedby="emailConfirmacao-error" />
-                  <small class="field-error" id="emailConfirmacao-error"></small>
-                </div>
-              </div>
-            </fieldset>
-
-            <fieldset class="form-block">
-              <legend>3. Endereço</legend>
-              <div class="field-row">
-                <div class="field">
-                  <label for="cep">CEP *</label>
-                  <input id="cep" name="cep" type="text" inputmode="numeric" maxlength="9" required autocomplete="postal-code" placeholder="00000-000" aria-describedby="cep-hint cep-error" />
-                  <small class="field-hint" id="cep-hint">Ao informar o CEP, o endereço será preenchido automaticamente quando possível.</small>
-                  <small class="field-error" id="cep-error"></small>
-                </div>
-                <div class="field">
-                  <label for="estado">Estado *</label>
-                  <select id="estado" name="estado" required autocomplete="address-level1">
+                  <label for="ufNascimento">UF de nascimento *</label>
+                  <select id="ufNascimento" name="ufNascimento" class="uf-select" required>
                     <option value="">UF</option>
                   </select>
-                  <small class="field-error" id="estado-error"></small>
-                </div>
-              </div>
-              <div class="field">
-                <label for="logradouro">Logradouro *</label>
-                <input id="logradouro" name="logradouro" type="text" required autocomplete="address-line1" />
-                <small class="field-error" id="logradouro-error"></small>
-              </div>
-              <div class="field-row">
-                <div class="field">
-                  <label for="numero">Número *</label>
-                  <input id="numero" name="numero" type="text" required autocomplete="off" placeholder="Nº ou S/N" />
-                  <small class="field-error" id="numero-error"></small>
+                  <small class="field-error" id="ufNascimento-error"></small>
                 </div>
                 <div class="field">
-                  <label for="complemento">Complemento</label>
-                  <input id="complemento" name="complemento" type="text" autocomplete="address-line2" placeholder="Apto, bloco, casa..." />
-                  <small class="field-error" id="complemento-error"></small>
+                  <label for="estadoCivil">Estado civil *</label>
+                  <select id="estadoCivil" name="estadoCivil" required>
+                    <option value="">Selecione</option>
+                    <option value="solteiro">Solteiro</option>
+                    <option value="casado">Casado</option>
+                    <option value="divorciado">Divorciado</option>
+                    <option value="viuvo">Viúvo</option>
+                    <option value="uniao_estavel">União estável</option>
+                    <option value="outro">Outro</option>
+                  </select>
+                  <small class="field-error" id="estadoCivil-error"></small>
                 </div>
-              </div>
-              <div class="field-row">
                 <div class="field">
-                  <label for="bairro">Bairro *</label>
-                  <input id="bairro" name="bairro" type="text" required autocomplete="address-level3" />
-                  <small class="field-error" id="bairro-error"></small>
+                  <label for="whatsapp">WhatsApp *</label>
+                  <input id="whatsapp" name="whatsapp" type="tel" inputmode="numeric" maxlength="16" required autocomplete="tel" placeholder="(00) 00000-0000" aria-describedby="whatsapp-hint whatsapp-error" />
+                  <small class="field-hint" id="whatsapp-hint">WhatsApp com DDD, usado no contato das próximas etapas.</small>
+                  <small class="field-error" id="whatsapp-error"></small>
+                </div>
+                <div class="field-row">
+                  <div class="field">
+                    <label for="email">E-mail *</label>
+                    <input id="email" name="email" type="email" required autocomplete="email" placeholder="nome@exemplo.com" aria-describedby="email-error" />
+                    <small class="field-error" id="email-error"></small>
+                  </div>
+                  <div class="field">
+                    <label for="emailConfirmacao">Confirme o e-mail *</label>
+                    <input id="emailConfirmacao" name="emailConfirmacao" type="email" required autocomplete="email" placeholder="Repita o e-mail" aria-describedby="emailConfirmacao-error" />
+                    <small class="field-error" id="emailConfirmacao-error"></small>
+                  </div>
                 </div>
                 <div class="field">
-                  <label for="cidade">Cidade *</label>
-                  <input id="cidade" name="cidade" type="text" required autocomplete="address-level2" />
-                  <small class="field-error" id="cidade-error"></small>
+                  <label for="telefoneEmergencia">Telefone de emergência *</label>
+                  <input id="telefoneEmergencia" name="telefoneEmergencia" type="tel" inputmode="numeric" maxlength="16" placeholder="(00) 00000-0000" />
+                  <small class="field-error" id="telefoneEmergencia-error"></small>
                 </div>
-              </div>
-            </fieldset>
+                <div class="field-row">
+                  <div class="field">
+                    <label for="planoSaude">Plano de saúde *</label>
+                    <input id="planoSaude" name="planoSaude" type="text" maxlength="80" placeholder="Nome do plano" />
+                    <label class="consent consent-quiet" for="naoPossuiPlanoSaude">
+                      <input id="naoPossuiPlanoSaude" name="naoPossuiPlanoSaude" type="checkbox" />
+                      <span>Não possuo plano de saúde</span>
+                    </label>
+                    <small class="field-error" id="planoSaude-error"></small>
+                  </div>
+                  <div class="field">
+                    <label for="tipoSanguineo">Tipo sanguíneo *</label>
+                    <select id="tipoSanguineo" name="tipoSanguineo">
+                      <option value="nao_informado">Não informado</option>
+                      <option value="A+">A+</option>
+                      <option value="A-">A-</option>
+                      <option value="B+">B+</option>
+                      <option value="B-">B-</option>
+                      <option value="AB+">AB+</option>
+                      <option value="AB-">AB-</option>
+                      <option value="O+">O+</option>
+                      <option value="O-">O-</option>
+                    </select>
+                    <small class="field-error" id="tipoSanguineo-error"></small>
+                  </div>
+                </div>
+                <div class="field">
+                  <label for="tratamentoSaude">Tratamento de saúde em curso</label>
+                  <textarea id="tratamentoSaude" name="tratamentoSaude" rows="2" maxlength="400" placeholder="Se houver, descreva brevemente."></textarea>
+                  <small class="field-error" id="tratamentoSaude-error"></small>
+                </div>
+                <div class="field">
+                  <label for="proponenteBusca">Quem o convidou a ser iniciado? *</label>
+                  <input id="proponenteBusca" name="proponenteBusca" type="text" maxlength="80" autocomplete="off" placeholder="Digite o nome do Irmão" aria-describedby="proponenteSelecionado proponenteBusca-error" />
+                  <input id="proponenteId" name="proponenteId" type="hidden" />
+                  <input id="proponenteNome" name="proponenteNome" type="hidden" />
+                  <ul class="proponente-sugestoes" id="proponenteSugestoes" hidden role="listbox" aria-label="Sugestões de Irmãos"></ul>
+                  <p class="proponente-selecionado" id="proponenteSelecionado" hidden></p>
+                  <small class="field-error" id="proponenteBusca-error"></small>
+                </div>
+              </fieldset>
+            </section>
 
-            <fieldset class="form-block">
-              <legend>4. Motivação</legend>
-              <div class="field">
-                <label for="motivacao">Por que deseja ingressar na Maçonaria? *</label>
-                <textarea id="motivacao" name="motivacao" rows="7" required maxlength="2000" aria-describedby="motivacao-count motivacao-error"></textarea>
-                <div class="char-count" id="motivacao-count">0 / 2000</div>
-                <small class="field-error" id="motivacao-error"></small>
-              </div>
-            </fieldset>
+            <section class="form-step" data-step="2" hidden aria-labelledby="step-2-title">
+              <fieldset class="form-block">
+                <legend id="step-2-title">2. Endereço</legend>
+                <div class="field-row">
+                  <div class="field">
+                    <label for="cep">CEP *</label>
+                    <input id="cep" name="cep" type="text" inputmode="numeric" maxlength="9" required autocomplete="postal-code" placeholder="00000-000" aria-describedby="cep-hint cep-error" />
+                    <small class="field-hint" id="cep-hint">O endereço é preenchido automaticamente quando o CEP é encontrado.</small>
+                    <small class="field-error" id="cep-error"></small>
+                  </div>
+                  <div class="field">
+                    <label for="estado">Estado *</label>
+                    <select id="estado" name="estado" class="uf-select" required autocomplete="address-level1">
+                      <option value="">UF</option>
+                    </select>
+                    <small class="field-error" id="estado-error"></small>
+                  </div>
+                </div>
+                <div class="field">
+                  <label for="logradouro">Logradouro *</label>
+                  <input id="logradouro" name="logradouro" type="text" required autocomplete="address-line1" />
+                  <small class="field-error" id="logradouro-error"></small>
+                </div>
+                <div class="field-row">
+                  <div class="field">
+                    <label for="numero">Número *</label>
+                    <input id="numero" name="numero" type="text" required autocomplete="off" placeholder="Nº ou S/N" />
+                    <small class="field-error" id="numero-error"></small>
+                  </div>
+                  <div class="field">
+                    <label for="complemento">Complemento</label>
+                    <input id="complemento" name="complemento" type="text" autocomplete="address-line2" placeholder="Apto, bloco, casa..." />
+                    <small class="field-error" id="complemento-error"></small>
+                  </div>
+                </div>
+                <div class="field-row">
+                  <div class="field">
+                    <label for="bairro">Bairro *</label>
+                    <input id="bairro" name="bairro" type="text" required autocomplete="address-level3" />
+                    <small class="field-error" id="bairro-error"></small>
+                  </div>
+                  <div class="field">
+                    <label for="cidade">Cidade *</label>
+                    <input id="cidade" name="cidade" type="text" required autocomplete="address-level2" />
+                    <small class="field-error" id="cidade-error"></small>
+                  </div>
+                </div>
+                <div class="field-row">
+                  <div class="field">
+                    <label for="pais">País *</label>
+                    <input id="pais" name="pais" type="text" maxlength="60" value="Brasil" />
+                    <small class="field-error" id="pais-error"></small>
+                  </div>
+                  <div class="field">
+                    <label for="tempoResidencia">Tempo de residência *</label>
+                    <input id="tempoResidencia" name="tempoResidencia" type="text" maxlength="40" placeholder="Ex.: 5 anos" />
+                    <small class="field-error" id="tempoResidencia-error"></small>
+                  </div>
+                </div>
+              </fieldset>
+            </section>
 
-            <fieldset class="form-block">
-              <legend>5. Consentimento e LGPD</legend>
-              <p class="field-hint">
-                Os dados serão utilizados exclusivamente para análise deste Cadastro do candidato e condução
-                das etapas institucionais. Correção ou exclusão podem ser solicitadas pelo e-mail
-                <a href="mailto:lacos.de.fraternidade.357.251@gmail.com">lacos.de.fraternidade.357.251@gmail.com</a>.
-                Consulte a <a href="privacidade.html">política de privacidade</a>.
-              </p>
-              <div class="field consent-field">
-                <label class="consent" for="lgpdAceite">
-                  <input id="lgpdAceite" name="lgpdAceite" type="checkbox" required />
-                  <span>Autorizo o tratamento dos meus dados pessoais para fins de análise do meu Cadastro do candidato e condução das etapas institucionais relacionadas, nos termos da Lei Geral de Proteção de Dados Pessoais — LGPD. *</span>
-                </label>
-                <small class="field-error" id="lgpdAceite-error"></small>
-              </div>
-            </fieldset>
+            <section class="form-step" data-step="3" hidden aria-labelledby="step-3-title">
+              <fieldset class="form-block">
+                <legend id="step-3-title">3. Família</legend>
+                <div id="bloco-conjuge" class="conditional family-block" hidden>
+                  <p class="family-block-title">Esposa ou companheira</p>
+                  <div class="field">
+                    <label for="esposaNome">Nome completo da esposa ou companheira *</label>
+                    <input id="esposaNome" name="esposaNome" type="text" maxlength="120" autocomplete="off" />
+                    <small class="field-error" id="esposaNome-error"></small>
+                  </div>
+                  <div class="field-row">
+                    <div class="field">
+                      <label for="dataCasamento">Data de casamento *</label>
+                      <input id="dataCasamento" name="dataCasamento" class="date-mask" type="text" inputmode="numeric" maxlength="10" placeholder="dd/mm/aaaa" />
+                      <small class="field-error" id="dataCasamento-error"></small>
+                    </div>
+                    <div class="field">
+                      <label for="esposaNascimento">Nascimento da esposa ou companheira *</label>
+                      <input id="esposaNascimento" name="esposaNascimento" class="date-mask" type="text" inputmode="numeric" maxlength="10" placeholder="dd/mm/aaaa" />
+                      <small class="field-error" id="esposaNascimento-error"></small>
+                    </div>
+                  </div>
+                  <div class="field">
+                    <label for="esposaWhatsapp">WhatsApp da esposa ou companheira *</label>
+                    <input id="esposaWhatsapp" name="esposaWhatsapp" type="tel" inputmode="numeric" maxlength="16" autocomplete="off" placeholder="(00) 00000-0000" />
+                    <small class="field-error" id="esposaWhatsapp-error"></small>
+                  </div>
+                  <div class="field consent-field family-consent">
+                    <p class="family-consent-title">Consentimento familiar</p>
+                    <label class="consent consent-quiet" for="consentimentoEsposa">
+                      <input id="consentimentoEsposa" name="consentimentoEsposa" type="checkbox" />
+                      <span>Estou ciente de que o consentimento da esposa ou companheira será necessário.</span>
+                    </label>
+                    <small class="field-error" id="consentimentoEsposa-error"></small>
+                  </div>
+                </div>
+                <div id="bloco-mae" class="conditional family-block" hidden>
+                  <p class="family-block-title">Dados da mãe</p>
+                  <div class="field">
+                    <label for="maeNome">Nome completo da mãe para contato familiar *</label>
+                    <input id="maeNome" name="maeNome" type="text" maxlength="120" autocomplete="off" />
+                    <small class="field-error" id="maeNome-error"></small>
+                  </div>
+                  <div class="field">
+                    <label for="maeWhatsapp">WhatsApp da mãe *</label>
+                    <input id="maeWhatsapp" name="maeWhatsapp" type="tel" inputmode="numeric" maxlength="16" autocomplete="off" placeholder="(00) 00000-0000" />
+                    <small class="field-error" id="maeWhatsapp-error"></small>
+                  </div>
+                  <div class="field consent-field family-consent">
+                    <p class="family-consent-title">Consentimento familiar</p>
+                    <label class="consent consent-quiet" for="consentimentoMae">
+                      <input id="consentimentoMae" name="consentimentoMae" type="checkbox" />
+                      <span>Estou ciente de que o consentimento da mãe será necessário.</span>
+                    </label>
+                    <small class="field-error" id="consentimentoMae-error"></small>
+                  </div>
+                </div>
+                <div id="bloco-outro" class="conditional family-block" hidden>
+                  <div class="field">
+                    <label for="situacaoFamiliar">Situação familiar *</label>
+                    <textarea id="situacaoFamiliar" name="situacaoFamiliar" rows="3" maxlength="400" placeholder="Descreva brevemente sua situação familiar."></textarea>
+                    <small class="field-error" id="situacaoFamiliar-error"></small>
+                  </div>
+                </div>
+                <div id="upload-certidao-civil" class="upload-slot" data-upload="civil"></div>
+                <div class="field">
+                  <span class="choice-label" id="possuiFilhos-label">Possui filhos?</span>
+                  <div class="choice-row" role="radiogroup" aria-labelledby="possuiFilhos-label">
+                    <label class="choice-chip" for="possuiFilhosNao">
+                      <input id="possuiFilhosNao" class="visually-hidden" name="possuiFilhos" type="radio" value="false" checked />
+                      <span>Não</span>
+                    </label>
+                    <label class="choice-chip" for="possuiFilhosSim">
+                      <input id="possuiFilhosSim" class="visually-hidden" name="possuiFilhos" type="radio" value="true" />
+                      <span>Sim</span>
+                    </label>
+                  </div>
+                  <small class="field-error" id="possuiFilhos-error"></small>
+                </div>
+                <div id="bloco-filhos" class="conditional" hidden>
+                  <div id="filhos-lista"></div>
+                  <button class="link-action link-action-add" id="add-filho" type="button">＋ Adicionar filho</button>
+                  <small class="field-error" id="filhos-error"></small>
+                </div>
+              </fieldset>
+            </section>
 
-            <button class="button button-primary submit-button" id="submit-button" type="submit">Enviar cadastro</button>
+            <section class="form-step" data-step="4" hidden aria-labelledby="step-4-title">
+              <fieldset class="form-block">
+                <legend id="step-4-title">4. Formação e profissão</legend>
+                <div class="field">
+                  <label for="grauInstrucao">Grau de instrução *</label>
+                  <select id="grauInstrucao" name="grauInstrucao" required>
+                    <option value="">Selecione</option>
+                    <option value="fundamental">Fundamental</option>
+                    <option value="medio">Médio</option>
+                    <option value="tecnico">Técnico</option>
+                    <option value="superior">Superior</option>
+                    <option value="pos_graduacao">Pós-graduação</option>
+                    <option value="mestrado">Mestrado</option>
+                    <option value="doutorado">Doutorado</option>
+                    <option value="outro">Outro</option>
+                  </select>
+                  <small class="field-error" id="grauInstrucao-error"></small>
+                </div>
+                <div class="field-row">
+                  <div class="field">
+                    <label for="formacao">Formação *</label>
+                    <input id="formacao" name="formacao" type="text" maxlength="120" />
+                    <small class="field-error" id="formacao-error"></small>
+                  </div>
+                  <div class="field">
+                    <label for="especializacao">Especialização</label>
+                    <input id="especializacao" name="especializacao" type="text" maxlength="120" />
+                    <small class="field-error" id="especializacao-error"></small>
+                  </div>
+                </div>
+                <div class="field">
+                  <label for="profissao">Profissão *</label>
+                  <input id="profissao" name="profissao" type="text" maxlength="80" />
+                  <small class="field-error" id="profissao-error"></small>
+                </div>
+                <div class="field">
+                  <label for="especialidadeProfissional">Especialidade profissional</label>
+                  <input id="especialidadeProfissional" name="especialidadeProfissional" type="text" maxlength="80" />
+                </div>
+                <div class="field-row">
+                  <div class="field">
+                    <label for="rendaMensal">Renda mensal *</label>
+                    <input id="rendaMensal" name="rendaMensal" type="text" maxlength="40" />
+                    <small class="field-error" id="rendaMensal-error"></small>
+                  </div>
+                  <div class="field">
+                    <label for="rendaFamiliar">Renda familiar *</label>
+                    <input id="rendaFamiliar" name="rendaFamiliar" type="text" maxlength="40" />
+                    <small class="field-error" id="rendaFamiliar-error"></small>
+                  </div>
+                </div>
+                <div class="field-row">
+                  <div class="field">
+                    <label for="empresa">Empresa *</label>
+                    <input id="empresa" name="empresa" type="text" maxlength="120" />
+                    <small class="field-error" id="empresa-error"></small>
+                  </div>
+                  <div class="field">
+                    <label for="cargoEmpresa">Cargo ou função *</label>
+                    <input id="cargoEmpresa" name="cargoEmpresa" type="text" maxlength="80" />
+                    <small class="field-error" id="cargoEmpresa-error"></small>
+                  </div>
+                </div>
+                <div class="field">
+                  <label for="dataAdmissaoEmpresa">Data de admissão</label>
+                  <input id="dataAdmissaoEmpresa" name="dataAdmissaoEmpresa" class="date-mask" type="text" inputmode="numeric" maxlength="10" placeholder="dd/mm/aaaa" />
+                  <small class="field-error" id="dataAdmissaoEmpresa-error"></small>
+                </div>
+                <div class="field">
+                  <label for="empresaLogradouro">Endereço profissional</label>
+                  <input id="empresaLogradouro" name="empresaLogradouro" type="text" maxlength="120" />
+                </div>
+                <div class="field-row">
+                  <div class="field">
+                    <label for="empresaNumero">Número</label>
+                    <input id="empresaNumero" name="empresaNumero" type="text" maxlength="20" />
+                  </div>
+                  <div class="field">
+                    <label for="empresaCep">CEP profissional</label>
+                    <input id="empresaCep" name="empresaCep" type="text" inputmode="numeric" maxlength="9" placeholder="00000-000" />
+                    <small class="field-error" id="empresaCep-error"></small>
+                  </div>
+                </div>
+                <div class="field-row">
+                  <div class="field">
+                    <label for="empresaBairro">Bairro</label>
+                    <input id="empresaBairro" name="empresaBairro" type="text" maxlength="80" />
+                  </div>
+                  <div class="field">
+                    <label for="empresaCidade">Cidade</label>
+                    <input id="empresaCidade" name="empresaCidade" type="text" maxlength="80" />
+                  </div>
+                </div>
+                <div class="field-row">
+                  <div class="field">
+                    <label for="empresaEstado">UF profissional</label>
+                    <select id="empresaEstado" name="empresaEstado" class="uf-select">
+                      <option value="">UF</option>
+                    </select>
+                    <small class="field-error" id="empresaEstado-error"></small>
+                  </div>
+                  <div class="field">
+                    <label for="empresaPais">País</label>
+                    <input id="empresaPais" name="empresaPais" type="text" maxlength="60" value="Brasil" />
+                  </div>
+                </div>
+                <div class="field-row">
+                  <div class="field">
+                    <label for="empresaTelefone">Telefone profissional</label>
+                    <input id="empresaTelefone" name="empresaTelefone" type="tel" inputmode="numeric" maxlength="16" />
+                  </div>
+                  <div class="field">
+                    <label for="empresaRamal">Ramal</label>
+                    <input id="empresaRamal" name="empresaRamal" type="text" maxlength="20" />
+                  </div>
+                </div>
+                <div class="field">
+                  <span class="choice-label" id="foiMilitar-label">É ou foi militar?</span>
+                  <div class="choice-row" role="radiogroup" aria-labelledby="foiMilitar-label">
+                    <label class="choice-chip" for="foiMilitarNao">
+                      <input id="foiMilitarNao" class="visually-hidden" name="foiMilitar" type="radio" value="false" checked />
+                      <span>Não</span>
+                    </label>
+                    <label class="choice-chip" for="foiMilitarSim">
+                      <input id="foiMilitarSim" class="visually-hidden" name="foiMilitar" type="radio" value="true" />
+                      <span>Sim</span>
+                    </label>
+                  </div>
+                </div>
+                <div id="bloco-militar" class="conditional" hidden>
+                  <div class="field">
+                    <label for="patenteMilitar">Patente ou graduação *</label>
+                    <input id="patenteMilitar" name="patenteMilitar" type="text" maxlength="80" />
+                    <small class="field-error" id="patenteMilitar-error"></small>
+                  </div>
+                  <div class="field">
+                    <label for="localMilitar">Local ou organização *</label>
+                    <input id="localMilitar" name="localMilitar" type="text" maxlength="120" />
+                    <small class="field-error" id="localMilitar-error"></small>
+                  </div>
+                </div>
+              </fieldset>
+            </section>
+
+            <section class="form-step" data-step="5" hidden aria-labelledby="step-5-title">
+              <fieldset class="form-block">
+                <legend id="step-5-title">5. Referências e informações complementares</legend>
+                <div id="referencias-lista"></div>
+                <h3>Referência comercial ou bancária</h3>
+                <div class="field">
+                  <label for="refComercialNome">Razão social ou nome *</label>
+                  <input id="refComercialNome" name="refComercialNome" type="text" maxlength="120" />
+                  <small class="field-error" id="refComercialNome-error"></small>
+                </div>
+                <div class="field-row">
+                  <div class="field">
+                    <label for="refComercialTelefone">Telefone</label>
+                    <input id="refComercialTelefone" name="refComercialTelefone" type="tel" inputmode="numeric" maxlength="16" />
+                  </div>
+                  <div class="field">
+                    <label for="refComercialCep">CEP</label>
+                    <input id="refComercialCep" name="refComercialCep" type="text" inputmode="numeric" maxlength="9" />
+                  </div>
+                </div>
+                <div class="field">
+                  <label for="refComercialLogradouro">Endereço</label>
+                  <input id="refComercialLogradouro" name="refComercialLogradouro" type="text" maxlength="120" />
+                </div>
+                <div class="field-row">
+                  <div class="field">
+                    <label for="refComercialBairro">Bairro</label>
+                    <input id="refComercialBairro" name="refComercialBairro" type="text" maxlength="80" />
+                  </div>
+                  <div class="field">
+                    <label for="refComercialCidade">Cidade</label>
+                    <input id="refComercialCidade" name="refComercialCidade" type="text" maxlength="80" />
+                  </div>
+                </div>
+                <div class="field">
+                  <label for="refComercialEstado">Estado</label>
+                  <select id="refComercialEstado" name="refComercialEstado" class="uf-select">
+                    <option value="">UF</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label for="entidades">Entidades das quais participa</label>
+                  <textarea id="entidades" name="entidades" rows="3" maxlength="400"></textarea>
+                </div>
+                <div class="field">
+                  <span class="choice-label" id="processoCriminal-label">Responde a processo criminal?</span>
+                  <div class="choice-row" role="radiogroup" aria-labelledby="processoCriminal-label">
+                    <label class="choice-chip" for="processoCriminalNao">
+                      <input id="processoCriminalNao" class="visually-hidden" name="processoCriminal" type="radio" value="false" checked />
+                      <span>Não</span>
+                    </label>
+                    <label class="choice-chip" for="processoCriminalSim">
+                      <input id="processoCriminalSim" class="visually-hidden" name="processoCriminal" type="radio" value="true" />
+                      <span>Sim</span>
+                    </label>
+                  </div>
+                </div>
+                <div id="bloco-processo" class="conditional" hidden>
+                  <div class="field">
+                    <label for="processoCriminalDetalhe">Detalhes do processo *</label>
+                    <textarea id="processoCriminalDetalhe" name="processoCriminalDetalhe" rows="3" maxlength="600"></textarea>
+                    <small class="field-error" id="processoCriminalDetalhe-error"></small>
+                  </div>
+                </div>
+                <div class="field">
+                  <span class="choice-label" id="filiacaoPartidaria-label">Possui filiação partidária?</span>
+                  <div class="choice-row" role="radiogroup" aria-labelledby="filiacaoPartidaria-label">
+                    <label class="choice-chip" for="filiacaoPartidariaNao">
+                      <input id="filiacaoPartidariaNao" class="visually-hidden" name="filiacaoPartidaria" type="radio" value="false" checked />
+                      <span>Não</span>
+                    </label>
+                    <label class="choice-chip" for="filiacaoPartidariaSim">
+                      <input id="filiacaoPartidariaSim" class="visually-hidden" name="filiacaoPartidaria" type="radio" value="true" />
+                      <span>Sim</span>
+                    </label>
+                  </div>
+                </div>
+                <div id="bloco-partido" class="conditional" hidden>
+                  <div class="field">
+                    <label for="partido">Partido *</label>
+                    <input id="partido" name="partido" type="text" maxlength="80" />
+                    <small class="field-error" id="partido-error"></small>
+                  </div>
+                </div>
+                <div class="field">
+                  <label for="outrasInformacoes">Outras informações</label>
+                  <textarea id="outrasInformacoes" name="outrasInformacoes" rows="3" maxlength="600"></textarea>
+                </div>
+                <div class="field">
+                  <label for="motivacao">Por que deseja ingressar na Maçonaria? *</label>
+                  <textarea id="motivacao" name="motivacao" rows="7" required maxlength="2000" aria-describedby="motivacao-count motivacao-error"></textarea>
+                  <div class="char-count" id="motivacao-count">0 / 2000</div>
+                  <small class="field-error" id="motivacao-error"></small>
+                </div>
+              </fieldset>
+            </section>
+
+            <section class="form-step" data-step="6" hidden aria-labelledby="step-6-title">
+              <fieldset class="form-block">
+                <legend id="step-6-title">6. Documentos</legend>
+                <p class="field-hint" id="documentos-hint">PDF, JPG ou PNG · máximo 5 MB por arquivo.</p>
+                <div id="documentos-lista"></div>
+                <small class="field-error" id="documentos-error"></small>
+              </fieldset>
+            </section>
+
+            <section class="form-step" data-step="7" hidden aria-labelledby="step-7-title">
+              <fieldset class="form-block">
+                <legend id="step-7-title" class="visually-hidden">Revisão e envio</legend>
+                <div id="revisao-conteudo"></div>
+                <section class="privacy-block" aria-labelledby="privacy-title">
+                  <h2 id="privacy-title">Privacidade e tratamento de dados</h2>
+                  <p>Os dados serão usados para análise deste Cadastro do candidato e condução das etapas institucionais.</p>
+                  <p>Solicitações de correção ou exclusão podem ser encaminhadas à Secretaria.</p>
+                  <p class="privacy-link-wrap">
+                    <a class="privacy-link" href="privacidade.html">Consultar Política de Privacidade <span aria-hidden="true">→</span></a>
+                  </p>
+                  <div class="field consent-field">
+                    <label class="consent" for="lgpdAceite">
+                      <input id="lgpdAceite" name="lgpdAceite" type="checkbox" required />
+                      <span>Li e concordo com o tratamento dos meus dados conforme a Política de Privacidade.</span>
+                    </label>
+                    <small class="field-error" id="lgpdAceite-error"></small>
+                  </div>
+                </section>
+              </fieldset>
+            </section>
+
+            <div class="form-wizard-nav">
+              <button class="button button-secondary" id="wizard-back" type="button" hidden>Voltar</button>
+              <button class="button button-primary" id="wizard-next" type="button">Continuar</button>
+              <button class="button button-primary submit-button" id="submit-button" type="submit" hidden>Enviar cadastro</button>
+            </div>
             <p class="form-status" id="form-status" role="status" aria-live="polite"></p>
           </form>
         </div>
@@ -367,6 +769,6 @@
     <script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/l10n/pt.js"></script>
     <script src="site.js?v=16"></script>
-    <script src="script.js?v=14"></script>
+    <script src="script.js?v=22"></script>
   </body>
 </html>

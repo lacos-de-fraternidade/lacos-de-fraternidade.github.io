@@ -236,4 +236,29 @@ export async function sendSecretarioEmail(data: InteresseRegistro) {
   });
 }
 
+export async function sendProponenteEmail(input: {
+  to: string;
+  candidatoNome: string;
+  proponenteNome: string;
+}) {
+  const inner = `
+    <p style="margin:0 0 18px;color:#44536a;">Prezado ${escapeHtml(input.proponenteNome || "Irmão")},</p>
+    <p style="margin:0 0 18px;color:#44536a;">
+      <strong>${escapeHtml(input.candidatoNome)}</strong> identificou você como o Irmão que o convidou
+      a ser iniciado e, portanto, como seu proponente neste Cadastro do candidato.
+    </p>
+    <p style="margin:0;color:#5f6d80;font-size:13px;">A Secretaria da Loja também foi notificada. Este aviso não representa aprovação.</p>
+  `;
+  return sendEmail({
+    to: input.to,
+    subject: `Candidato identificou você como proponente — ${input.candidatoNome}`,
+    text: [
+      `Prezado ${input.proponenteNome || "Irmão"},`,
+      `${input.candidatoNome} identificou você como o Irmão que o convidou a ser iniciado / seu proponente.`,
+      "A Secretaria da Loja também foi notificada. Este aviso não representa aprovação.",
+    ].join("\n"),
+    html: layout("Identificação de proponente", inner),
+  });
+}
+
 

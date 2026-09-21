@@ -38,6 +38,9 @@ Trocar o pepper invalida hashes anteriores (esperado).
 | `login-with-cim` | `false` | Ainda não há sessão |
 | `recuperar-senha-cim` | `false` | Ainda não há sessão |
 | `bootstrap-convite-admin` | `false` | Procedimento único, secret de bootstrap |
+| `registrar-interesse` | `false` | Cadastro público do candidato |
+| `buscar-proponente` | `false` | Autocomplete público; RPC só com service_role |
+| `enviar-documento-candidatura` | `false` | Upload com token de curta duração |
 | `ativar-conta` | `true` | Exige JWT do convite |
 | `gerenciar-irmao` | `true` | Exige JWT de usuário autenticado |
 

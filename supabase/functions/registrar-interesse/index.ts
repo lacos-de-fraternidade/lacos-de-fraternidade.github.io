@@ -2,10 +2,11 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.8";
 import { hasValidPublishableKey, unauthorizedResponse } from "../_shared/auth.ts";
 import { jsonResponse, optionsResponse } from "../_shared/cors.ts";
 import { randomToken, sha256Hex } from "../_shared/crypto.ts";
-import { sendSecretarioEmail } from "../_shared/email.ts";
-import { normalizeInteresse } from "../_shared/validation.ts";
+import { sendProponenteEmail, sendSecretarioEmail } from "../_shared/email.ts";
+import { normalizeCandidatura, requiredDocumentTypes } from "../_shared/candidatura.ts";
 
 const TOKEN_TTL_MINUTES = 10;
+const UPLOAD_TTL_MINUTES = 40;
 const MAX_SUBMISSIONS_PER_DAY = 3;
 
 Deno.serve(async (req) => {
@@ -28,7 +29,15 @@ Deno.serve(async (req) => {
     return jsonResponse(req, 400, { ok: false, error: "Não foi possível ler os dados enviados." });
   }
 
-  const normalized = normalizeInteresse(payload);
+  const supabase = createClient(supabaseUrl, serviceRoleKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+
+  if (String(payload.acao || "") === "concluir") {
+    return concluirCandidatura(req, supabase, payload);
+  }
+
+  const normalized = normalizeCandidatura(payload);
   if (normalized.spam) {
     return jsonResponse(req, 200, { ok: true });
   }
@@ -37,9 +46,13 @@ Deno.serve(async (req) => {
   }
 
   const data = normalized.data;
-  const supabase = createClient(supabaseUrl, serviceRoleKey, {
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
+  const { data: eligible } = await supabase.rpc("proponente_elegivel", { p_id: data.proponente_id });
+  if (eligible !== true) {
+    return jsonResponse(req, 422, {
+      ok: false,
+      error: "O Irmão informado não pode constar como proponente. Selecione um Irmão ativo da Loja.",
+    });
+  }
 
   const [{ data: byEmail }, { data: byCpf }] = await Promise.all([
     supabase.from("interesse").select("id").eq("email", data.email).limit(1),
@@ -55,17 +68,9 @@ Deno.serve(async (req) => {
   const sinceDay = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
   const sinceWindow = new Date(Date.now() - 10 * 60 * 1000).toISOString();
   const [{ count, error: countError }, { count: recentCount, error: recentError }] = await Promise.all([
-    supabase
-      .from("interesse")
-      .select("id", { count: "exact", head: true })
-      .eq("email", data.email)
-      .gte("created_at", sinceDay),
-    supabase
-      .from("interesse")
-      .select("id", { count: "exact", head: true })
-      .gte("created_at", sinceWindow),
+    supabase.from("interesse").select("id", { count: "exact", head: true }).eq("email", data.email).gte("created_at", sinceDay),
+    supabase.from("interesse").select("id", { count: "exact", head: true }).gte("created_at", sinceWindow),
   ]);
-
   if (countError || recentError) {
     return jsonResponse(req, 500, { ok: false, error: "Não foi possível registrar o interesse." });
   }
@@ -76,9 +81,16 @@ Deno.serve(async (req) => {
     });
   }
 
+  const {
+    filhos,
+    referencias,
+    referencia_comercial,
+    ...interesseRow
+  } = data;
+
   const { data: interesse, error: insertError } = await supabase
     .from("interesse")
-    .insert(data)
+    .insert(interesseRow)
     .select("id")
     .single();
 
@@ -93,30 +105,158 @@ Deno.serve(async (req) => {
     return jsonResponse(req, 500, { ok: false, error: "Não foi possível salvar o registro." });
   }
 
-  const token = randomToken();
-  const { error: tokenError } = await supabase.from("cartilha_token").insert({
+  const abortPartial = async (message: string, code?: string) => {
+    console.error("candidatura parcial", code || "erro");
+    await supabase.from("interesse").delete().eq("id", interesse.id);
+    return jsonResponse(req, 500, { ok: false, error: message });
+  };
+
+  if (filhos.length) {
+    const { error } = await supabase.from("interesse_filhos").insert(
+      filhos.map((filho) => ({ ...filho, interesse_id: interesse.id })),
+    );
+    if (error) return abortPartial("Não foi possível salvar os filhos.", error.code);
+  }
+  if (referencias.length) {
+    const { error } = await supabase.from("interesse_referencias").insert(
+      referencias.map((item) => ({ ...item, interesse_id: interesse.id })),
+    );
+    if (error) return abortPartial("Não foi possível salvar as referências.", error.code);
+  }
+  const { error: comercialError } = await supabase.from("interesse_referencia_comercial").insert({
     interesse_id: interesse.id,
-    token_hash: await sha256Hex(token),
-    expires_at: new Date(Date.now() + TOKEN_TTL_MINUTES * 60 * 1000).toISOString(),
+    ...referencia_comercial,
   });
-  const cartilhaToken = tokenError ? null : token;
-  if (tokenError) {
-    console.error("cartilha_token", tokenError.code || "erro");
+  if (comercialError) {
+    return abortPartial("Não foi possível salvar a referência comercial.", comercialError.code);
   }
 
+  const uploadToken = randomToken();
+  const { error: tokenError } = await supabase.from("interesse_upload_token").insert({
+    interesse_id: interesse.id,
+    token_hash: await sha256Hex(uploadToken),
+    expires_at: new Date(Date.now() + UPLOAD_TTL_MINUTES * 60 * 1000).toISOString(),
+  });
+  if (tokenError) {
+    console.error("upload_token", tokenError.code || "erro");
+    return jsonResponse(req, 500, { ok: false, error: "Não foi possível iniciar o envio de documentos." });
+  }
+
+  return jsonResponse(req, 200, {
+    ok: true,
+    registrationStarted: true,
+    uploadToken,
+    documentosExigidos: requiredDocumentTypes(data.estado_civil),
+    expiresInMinutes: UPLOAD_TTL_MINUTES,
+  });
+});
+
+async function concluirCandidatura(
+  req: Request,
+  supabase: ReturnType<typeof createClient>,
+  payload: Record<string, unknown>,
+) {
+  const token = String(payload.token || payload.uploadToken || "").trim();
+  if (!token) return jsonResponse(req, 400, { ok: false, error: "Envio de documentos inválido." });
+  const tokenHash = await sha256Hex(token);
+  const { data: uploadRow } = await supabase
+    .from("interesse_upload_token")
+    .select("id, interesse_id, expires_at, used_at")
+    .eq("token_hash", tokenHash)
+    .maybeSingle();
+  if (!uploadRow || uploadRow.used_at || new Date(uploadRow.expires_at).getTime() <= Date.now()) {
+    return jsonResponse(req, 410, { ok: false, error: "O envio expirou. Fale com a Secretaria se já enviou os dados." });
+  }
+
+  const { data: interesse } = await supabase
+    .from("interesse")
+    .select("*")
+    .eq("id", uploadRow.interesse_id)
+    .maybeSingle();
+  if (!interesse) return jsonResponse(req, 404, { ok: false, error: "Cadastro não encontrado." });
+
+  const { data: docs } = await supabase
+    .from("interesse_documentos")
+    .select("tipo")
+    .eq("interesse_id", interesse.id);
+  const present = new Set((docs || []).map((row: { tipo: string }) => row.tipo));
+  const missing = requiredDocumentTypes(String(interesse.estado_civil || "")).filter((tipo) => !present.has(tipo));
+  if (missing.length) {
+    return jsonResponse(req, 422, {
+      ok: false,
+      error: "Há documentos obrigatórios pendentes.",
+      documentosPendentes: missing,
+    });
+  }
+
+  const cartilhaToken = randomToken();
+  const { error: cartilhaError } = await supabase.from("cartilha_token").insert({
+    interesse_id: interesse.id,
+    token_hash: await sha256Hex(cartilhaToken),
+    expires_at: new Date(Date.now() + TOKEN_TTL_MINUTES * 60 * 1000).toISOString(),
+  });
+  if (cartilhaError) console.error("cartilha_token", cartilhaError.code || "erro");
+
   let secretaryEmailSent = false;
+  let proponenteNotificacao = "nao_enviada";
   try {
-    const secretary = await sendSecretarioEmail(data);
+    const secretary = await sendSecretarioEmail(interesse);
     secretaryEmailSent = Boolean(secretary.sent);
   } catch (error) {
     console.error("Falha no e-mail do secretário", { name: error instanceof Error ? error.name : "erro" });
   }
 
+  try {
+    const { data: irmao } = await supabase
+      .from("irmaos")
+      .select("id, nome, email, auth_member_id")
+      .eq("id", interesse.proponente_id)
+      .maybeSingle();
+    let email = String(irmao?.email || "").trim();
+    if (!email && irmao?.auth_member_id) {
+      const { data: acesso } = await supabase
+        .from("irmaos_autorizados")
+        .select("email")
+        .eq("id", irmao.auth_member_id)
+        .maybeSingle();
+      email = String(acesso?.email || "").trim();
+    }
+    if (!email && irmao?.id) {
+      const { data: acesso } = await supabase
+        .from("irmaos_autorizados")
+        .select("email")
+        .eq("irmao_id", irmao.id)
+        .maybeSingle();
+      email = String(acesso?.email || "").trim();
+    }
+    if (!email) {
+      proponenteNotificacao = "sem_email";
+    } else {
+      const sent = await sendProponenteEmail({
+        to: email,
+        candidatoNome: String(interesse.nome || ""),
+        proponenteNome: String(irmao?.nome || ""),
+      });
+      proponenteNotificacao = sent.sent ? "enviada" : "falha";
+    }
+  } catch {
+    proponenteNotificacao = "falha";
+  }
+
+  await supabase.from("interesse").update({
+    status: "Recebida",
+    documentacao_completa: true,
+    notificacao_proponente: proponenteNotificacao,
+  }).eq("id", interesse.id);
+  await supabase.from("interesse_upload_token").update({
+    used_at: new Date().toISOString(),
+  }).eq("id", uploadRow.id);
+
   return jsonResponse(req, 200, {
     ok: true,
     registrationSuccess: true,
     secretaryEmailSent,
-    token: cartilhaToken,
+    token: cartilhaError ? null : cartilhaToken,
     expiresInMinutes: TOKEN_TTL_MINUTES,
   });
-});
+}

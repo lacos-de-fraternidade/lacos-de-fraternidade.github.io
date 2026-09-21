@@ -9,6 +9,12 @@ content_path = "./supabase/templates/recovery.html"
 [functions.registrar-interesse]
 verify_jwt = false
 
+[functions.buscar-proponente]
+verify_jwt = false
+
+[functions.enviar-documento-candidatura]
+verify_jwt = false
+
 [functions.abrir-cartilha]
 verify_jwt = false
 

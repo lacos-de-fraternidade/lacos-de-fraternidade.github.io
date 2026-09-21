@@ -7,7 +7,7 @@
     <meta name="theme-color" content="#123a74" />
     <title>Cadastro recebido | Laços de Fraternidade</title>
     <link rel="icon" href="assets/logo-classica.jpg" />
-    <link rel="stylesheet" href="styles.css?v=22" />
+    <link rel="stylesheet" href="styles.css?v=29" />
     <script src="config.js?v=14"></script>
   </head>
   <body class="page-confirm">
@@ -112,11 +112,21 @@
         </div>
       </section>
 
-      <section class="cartilha-section" id="cartilha" aria-labelledby="cartilha-titulo" hidden>
+      <section class="cartilha-bridge" aria-labelledby="cartilha-bridge-title">
+        <div class="container narrow">
+          <h2 id="cartilha-bridge-title">Enquanto aguarda nosso contato</h2>
+          <p>
+            Preparamos uma cartilha de orientação para ajudá-lo a conhecer melhor a Maçonaria,
+            seus princípios e o processo de ingresso.
+          </p>
+        </div>
+      </section>
+
+      <section class="cartilha-section" id="cartilha" data-state="active" aria-labelledby="cartilha-titulo" hidden>
         <div class="container narrow">
           <div class="cartilha-layout">
             <div class="cartilha-copy">
-              <p class="cartilha-badge">
+              <p class="cartilha-badge" id="cartilha-badge">
                 <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
                   <rect x="5" y="11" width="14" height="10" rx="2" />
                   <path d="M8 11V7.2a4 4 0 0 1 7.5-1.8" />
@@ -124,55 +134,58 @@
                 Acesso liberado
               </p>
               <h2 id="cartilha-titulo" tabindex="-1">Cartilha de orientação ao candidato</h2>
-              <p>
+              <p id="cartilha-state-copy">
                 Este material ajuda a compreender os princípios da Maçonaria e o processo de ingresso,
                 com clareza e discrição, antes das próximas etapas.
               </p>
-              <ul class="cartilha-meta">
+              <ul class="cartilha-meta" id="cartilha-meta">
                 <li>
                   <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true">
                     <circle cx="12" cy="12" r="8" />
                     <path d="M12 8v4l3 2" />
                   </svg>
-                  <span>Acesso válido por 10 minutos</span>
+                  <span id="cartilha-meta-acesso">10 minutos de acesso</span>
                 </li>
                 <li>
                   <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true">
                     <path d="M12 3 5 6.5v5.2c0 4.4 3 7.4 7 8.8 4-1.4 7-4.4 7-8.8V6.5L12 3z" />
                   </svg>
-                  <span>Material exclusivo e confidencial</span>
-                </li>
-                <li>
-                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true">
-                    <path d="M7 3h7l5 5v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z" />
-                    <path d="M14 3v5h5" />
-                  </svg>
-                  <span>Formato PDF / Leitura recomendada</span>
+                  <span>Material reservado</span>
                 </li>
               </ul>
             </div>
             <aside class="cartilha-doc">
+              <p class="cartilha-badge cartilha-badge-mobile" id="cartilha-badge-mobile">Acesso liberado</p>
               <div class="pdf-mark" aria-hidden="true">
                 <span class="pdf-glow"></span>
-                <svg viewBox="0 0 72 88" width="78" height="96">
-                  <rect x="8" y="4" width="56" height="80" rx="8" fill="#ffffff" stroke="#123a74" stroke-width="2" />
-                  <path d="M40 4v18h18" fill="#eef6fb" stroke="#123a74" stroke-width="2" />
-                  <text x="36" y="58" text-anchor="middle" fill="#123a74" font-size="14" font-weight="700" font-family="Inter, Arial, sans-serif">PDF</text>
+                <svg viewBox="0 0 64 80" width="72" height="90" fill="none">
+                  <path d="M8 8h32l16 16v48a8 8 0 0 1-8 8H16a8 8 0 0 1-8-8V8z" fill="#f4f8fb" stroke="#123a74" stroke-width="2"/>
+                  <path d="M40 8v12a4 4 0 0 0 4 4h12" stroke="#123a74" stroke-width="2"/>
+                  <text x="32" y="52" text-anchor="middle" fill="#123a74" font-size="12" font-family="Georgia, serif">PDF</text>
                 </svg>
               </div>
-              <p class="cartilha-doc-label">Cartilha do Candidato</p>
-              <button class="button button-primary" id="cartilha-baixar" type="button" disabled>
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                  <path d="M12 4v12M7 12l5 5 5-5M5 20h14" />
-                </svg>
-                Baixar PDF
-              </button>
-              <button class="button button-secondary" id="cartilha-ler" type="button" disabled>
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-                  <path d="M4 6c3-1.4 6-1.4 8 0v14c-2-1.4-5-1.4-8 0V6zM12 6c2-1.4 5-1.4 8 0v14c-3-1.4-6-1.4-8 0" />
-                </svg>
-                Ler no navegador
-              </button>
+              <h2 class="cartilha-doc-title" id="cartilha-state-title">Cartilha de orientação ao candidato</h2>
+              <p class="cartilha-doc-lead" id="cartilha-doc-lead">Material preparado para orientar seus próximos passos.</p>
+              <ul class="cartilha-facts">
+                <li>10 minutos de acesso</li>
+                <li>Material reservado</li>
+                <li>Documento em PDF</li>
+              </ul>
+              <p class="cartilha-doc-meta" id="cartilha-acesso">O acesso se encerra após o primeiro uso.</p>
+              <div class="cartilha-actions" id="cartilha-actions">
+                <button class="button button-primary" id="cartilha-baixar" type="button" disabled>
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                    <path d="M12 4v12M7 12l5 5 5-5M5 20h14" />
+                  </svg>
+                  Baixar cartilha
+                </button>
+                <button class="button button-secondary" id="cartilha-ler" type="button" disabled>
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                    <path d="M4 6c3-1.4 6-1.4 8 0v14c-2-1.4-5-1.4-8 0V6zM12 6c2-1.4 5-1.4 8 0v14c-3-1.4-6-1.4-8 0" />
+                  </svg>
+                  Ler no navegador
+                </button>
+              </div>
               <p class="cartilha-status" id="cartilha-status" role="status" aria-live="polite"></p>
             </aside>
           </div>
@@ -254,6 +267,6 @@
       </div>
     </footer>
     <script src="site.js?v=16"></script>
-    <script src="script.js?v=14"></script>
+    <script src="script.js?v=21"></script>
   </body>
 </html>

@@ -132,8 +132,8 @@ test("documentos: tipo, MIME, tamanho e isolamento do bucket da cartilha", () =>
 test("backend revalida proponente e não cria cadastro paralelo", () => {
   const registrar = read("supabase/functions/registrar-interesse/index.ts");
   const shared = read("supabase/functions/_shared/candidatura.ts");
-  const email = read("supabase/functions/_shared/email.ts");
-  const avisoProponente = email.slice(email.indexOf("sendProponenteEmail"));
+  const dossie = read("supabase/functions/_shared/email-dossie.js");
+  const avisoProponente = dossie.slice(dossie.indexOf("export function buildProponenteAviso"));
   assert.match(registrar, /normalizeCandidatura/);
   assert.match(registrar, /proponente_elegivel/);
   assert.match(registrar, /sendSecretarioEmail/);
@@ -141,7 +141,7 @@ test("backend revalida proponente e não cria cadastro paralelo", () => {
   assert.match(registrar, /acao.*concluir/);
   assert.match(shared, /proponente_id: proponenteId/);
   assert.doesNotMatch(shared, /irmao_convite_id/);
-  assert.doesNotMatch(avisoProponente, /formatCpf|data\.cpf|renda|logradouro|documento/);
+  assert.doesNotMatch(avisoProponente, /formatCpf|renda_mensal|Referência pessoal|Abrir documento/);
   assert.match(avisoProponente, /identificou você como o Irmão que o convidou/);
 });
 

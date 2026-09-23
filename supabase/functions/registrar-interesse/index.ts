@@ -2,6 +2,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.8";
 import { hasValidPublishableKey, unauthorizedResponse } from "../_shared/auth.ts";
 import { jsonResponse, optionsResponse } from "../_shared/cors.ts";
 import { randomToken, sha256Hex } from "../_shared/crypto.ts";
+import { loadCandidaturaDossie } from "../_shared/dossie-secretaria.ts";
 import { sendProponenteEmail, sendSecretarioEmail } from "../_shared/email.ts";
 import { normalizeCandidatura, requiredDocumentTypes } from "../_shared/candidatura.ts";
 
@@ -168,26 +169,18 @@ async function concluirCandidatura(
     return jsonResponse(req, 410, { ok: false, error: "O envio expirou. Fale com a Secretaria se já enviou os dados." });
   }
 
-  const { data: interesse } = await supabase
-    .from("interesse")
-    .select("*")
-    .eq("id", uploadRow.interesse_id)
-    .maybeSingle();
-  if (!interesse) return jsonResponse(req, 404, { ok: false, error: "Cadastro não encontrado." });
-
-  const { data: docs } = await supabase
-    .from("interesse_documentos")
-    .select("tipo")
-    .eq("interesse_id", interesse.id);
-  const present = new Set((docs || []).map((row: { tipo: string }) => row.tipo));
-  const missing = requiredDocumentTypes(String(interesse.estado_civil || "")).filter((tipo) => !present.has(tipo));
-  if (missing.length) {
+  const loaded = await loadCandidaturaDossie(supabase, String(uploadRow.interesse_id));
+  if (!loaded.ok) return jsonResponse(req, 404, { ok: false, error: loaded.error });
+  if (loaded.missingDocumentos.length) {
     return jsonResponse(req, 422, {
       ok: false,
       error: "Há documentos obrigatórios pendentes.",
-      documentosPendentes: missing,
+      documentosPendentes: loaded.missingDocumentos,
     });
   }
+
+  const interesse = loaded.payload.interesse;
+  const irmao = loaded.irmao;
 
   const cartilhaToken = randomToken();
   const { error: cartilhaError } = await supabase.from("cartilha_token").insert({
@@ -200,18 +193,16 @@ async function concluirCandidatura(
   let secretaryEmailSent = false;
   let proponenteNotificacao = "nao_enviada";
   try {
-    const secretary = await sendSecretarioEmail(interesse);
+    const secretary = await sendSecretarioEmail({
+      ...loaded.payload,
+      interesse: { ...interesse, documentacao_completa: true },
+    });
     secretaryEmailSent = Boolean(secretary.sent);
   } catch (error) {
     console.error("Falha no e-mail do secretário", { name: error instanceof Error ? error.name : "erro" });
   }
 
   try {
-    const { data: irmao } = await supabase
-      .from("irmaos")
-      .select("id, nome, email, auth_member_id")
-      .eq("id", interesse.proponente_id)
-      .maybeSingle();
     let email = String(irmao?.email || "").trim();
     if (!email && irmao?.auth_member_id) {
       const { data: acesso } = await supabase

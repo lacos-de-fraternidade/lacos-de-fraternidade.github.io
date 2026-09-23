@@ -30,5 +30,8 @@ verify_jwt = false
 [functions.gerenciar-irmao]
 verify_jwt = true
 
+[functions.reenviar-dossie-secretaria]
+verify_jwt = true
+
 [functions.bootstrap-convite-admin]
 verify_jwt = false

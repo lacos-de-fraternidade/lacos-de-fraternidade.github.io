@@ -1,77 +1,8 @@
+import { buildProponenteAviso, buildSecretarioDossie } from "./email-dossie.js";
+
 const NOTIFY_EMAIL = "lacos.de.fraternidade.357.251@gmail.com";
 const RESEND_FROM = `Loja Lacos de Fraternidade <onboarding@${["resend", "dev"].join(".")}>`;
 const LOGO_URL = "https://lacos-de-fraternidade.github.io/assets/logo-classica.jpg";
-const SITE_URL = "https://lacos-de-fraternidade.github.io/";
-
-export type InteresseRegistro = {
-  nome: string;
-  cpf: string;
-  email: string;
-  endereco: string;
-  data_nascimento: string | null;
-  estado_civil: string;
-  familiar_nome: string | null;
-  familiar_whatsapp: string | null;
-  familiar_papel: string | null;
-  consentimento_familiar: boolean | null;
-  situacao_familiar: string | null;
-  whatsapp: string;
-  cep: string;
-  logradouro: string;
-  numero: string;
-  complemento: string | null;
-  bairro: string;
-  cidade: string;
-  estado: string;
-  motivacao: string;
-  lgpd_versao: string;
-  status: string;
-};
-
-function formatCpf(value: string) {
-  const digits = value.replace(/\D/g, "");
-  if (digits.length !== 11) return value;
-  return digits.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
-}
-
-function formatWhatsapp(value: string) {
-  const digits = value.replace(/\D/g, "");
-  if (digits.length === 11) return digits.replace(/(\d{2})(\d{5})(\d{4})/, "($1) $2-$3");
-  if (digits.length === 10) return digits.replace(/(\d{2})(\d{4})(\d{4})/, "($1) $2-$3");
-  return value;
-}
-
-function formatCep(value: string) {
-  const digits = value.replace(/\D/g, "");
-  if (digits.length === 8) return digits.replace(/(\d{5})(\d{3})/, "$1-$2");
-  return value;
-}
-
-function formatDate(value: string | null) {
-  if (!value) return "—";
-  const [year, month, day] = value.split("-");
-  if (!day) return value;
-  return `${day}/${month}/${year}`;
-}
-
-function estadoCivilLabel(value: string) {
-  const map: Record<string, string> = {
-    solteiro: "Solteiro",
-    casado: "Casado",
-    divorciado: "Divorciado",
-    viuvo: "Viúvo",
-    uniao_estavel: "União estável",
-    outro: "Outro",
-  };
-  return map[value] || value;
-}
-
-function familiarLabel(papel: string | null) {
-  if (papel === "esposa") return "Esposa";
-  if (papel === "companheira") return "Companheira";
-  if (papel === "mae") return "Mãe";
-  return "Familiar";
-}
 
 function escapeHtml(value: string) {
   return value
@@ -118,13 +49,6 @@ function layout(title: string, inner: string) {
     </table>
   </body>
 </html>`;
-}
-
-function row(label: string, value: string) {
-  return `<tr>
-    <td style="padding:8px 0;color:#5f6d80;width:190px;vertical-align:top;">${escapeHtml(label)}</td>
-    <td style="padding:8px 0;color:#132033;font-weight:700;">${escapeHtml(value || "—")}</td>
-  </tr>`;
 }
 
 async function sendEmail(options: {
@@ -175,64 +99,25 @@ async function sendEmail(options: {
   return { sent: true, status: response.status, id: parsed.id || null };
 }
 
-export async function sendSecretarioEmail(data: InteresseRegistro) {
-  const when = enviadoEm();
-  const cpf = formatCpf(data.cpf);
-  const inner = `
-    <p style="margin:0 0 18px;color:#44536a;">Uma nova manifestação foi registrada no site institucional.</p>
-    <p style="margin:0 0 18px;"><strong>Recebida em:</strong> ${escapeHtml(when)}</p>
-    <h2 style="font-size:16px;color:#123a74;margin:24px 0 8px;">Dados pessoais</h2>
-    <table width="100%" cellspacing="0" cellpadding="0">
-      ${row("Nome", data.nome)}
-      ${row("CPF", cpf)}
-      ${row("Nascimento", formatDate(data.data_nascimento))}
-      ${row("Estado civil", estadoCivilLabel(data.estado_civil))}
-      ${row("WhatsApp", formatWhatsapp(data.whatsapp))}
-      ${row("E-mail", data.email)}
-    </table>
-    <h2 style="font-size:16px;color:#123a74;margin:24px 0 8px;">Família e consentimento</h2>
-    <table width="100%" cellspacing="0" cellpadding="0">
-      ${row(familiarLabel(data.familiar_papel), data.familiar_nome || data.situacao_familiar || "—")}
-      ${row("WhatsApp familiar", data.familiar_whatsapp ? formatWhatsapp(data.familiar_whatsapp) : "—")}
-      ${row("Ciência do consentimento familiar", data.consentimento_familiar ? "Sim" : "Não se aplica")}
-    </table>
-    <h2 style="font-size:16px;color:#123a74;margin:24px 0 8px;">Endereço</h2>
-    <table width="100%" cellspacing="0" cellpadding="0">
-      ${row("CEP", formatCep(data.cep))}
-      ${row("Logradouro", data.logradouro)}
-      ${row("Número", data.numero)}
-      ${row("Complemento", data.complemento || "—")}
-      ${row("Bairro", data.bairro)}
-      ${row("Cidade/UF", `${data.cidade}/${data.estado}`)}
-    </table>
-    <h2 style="font-size:16px;color:#123a74;margin:24px 0 8px;">Motivação</h2>
-    <p style="white-space:pre-wrap;background:#f6f9fc;border-radius:12px;padding:16px;color:#24364d;">${escapeHtml(data.motivacao)}</p>
-    <p style="margin:24px 0 16px;font-size:13px;color:#5f6d80;">Status inicial: ${escapeHtml(data.status)} · Versão LGPD: ${escapeHtml(data.lgpd_versao)}</p>
-    <p style="margin:0;"><a href="${SITE_URL}" style="display:inline-block;background:#123a74;color:#ffffff;text-decoration:none;padding:12px 20px;border-radius:999px;font-weight:700;">Abrir o site institucional</a></p>
-  `;
-
-  const text = [
-    "Nova manifestação de interesse",
-    `Recebida em: ${when}`,
-    `Nome: ${data.nome}`,
-    `CPF: ${cpf}`,
-    `WhatsApp: ${formatWhatsapp(data.whatsapp)}`,
-    `E-mail: ${data.email}`,
-    `Nascimento: ${formatDate(data.data_nascimento)}`,
-    `Estado civil: ${estadoCivilLabel(data.estado_civil)}`,
-    `Familiar: ${data.familiar_nome || data.situacao_familiar || "—"}`,
-    `Endereço: ${data.endereco}`,
-    "",
-    "Motivação:",
-    data.motivacao,
-  ].join("\n");
-
+export async function sendSecretarioEmail(dossie: {
+  interesse: Record<string, unknown>;
+  proponenteNome?: string | null;
+  filhos?: unknown[];
+  referencias?: unknown[];
+  comercial?: Record<string, unknown> | null;
+  documentos?: unknown[];
+  recebidoEm?: string;
+}) {
+  const built = buildSecretarioDossie({
+    ...dossie,
+    recebidoEm: dossie.recebidoEm || enviadoEm(),
+  });
   return sendEmail({
     to: NOTIFY_EMAIL,
-    subject: `Nova manifestação de interesse — ${data.nome}`,
-    text,
-    html: layout("Nova manifestação de interesse", inner),
-    replyTo: data.email,
+    subject: built.subject,
+    text: built.text,
+    html: layout(built.title, built.inner),
+    replyTo: String(dossie.interesse?.email || ""),
   });
 }
 
@@ -241,24 +126,11 @@ export async function sendProponenteEmail(input: {
   candidatoNome: string;
   proponenteNome: string;
 }) {
-  const inner = `
-    <p style="margin:0 0 18px;color:#44536a;">Prezado ${escapeHtml(input.proponenteNome || "Irmão")},</p>
-    <p style="margin:0 0 18px;color:#44536a;">
-      <strong>${escapeHtml(input.candidatoNome)}</strong> identificou você como o Irmão que o convidou
-      a ser iniciado e, portanto, como seu proponente neste Cadastro do candidato.
-    </p>
-    <p style="margin:0;color:#5f6d80;font-size:13px;">A Secretaria da Loja também foi notificada. Este aviso não representa aprovação.</p>
-  `;
+  const built = buildProponenteAviso(input);
   return sendEmail({
     to: input.to,
-    subject: `Candidato identificou você como proponente — ${input.candidatoNome}`,
-    text: [
-      `Prezado ${input.proponenteNome || "Irmão"},`,
-      `${input.candidatoNome} identificou você como o Irmão que o convidou a ser iniciado / seu proponente.`,
-      "A Secretaria da Loja também foi notificada. Este aviso não representa aprovação.",
-    ].join("\n"),
-    html: layout("Identificação de proponente", inner),
+    subject: built.subject,
+    text: built.text,
+    html: layout(built.title, built.inner),
   });
 }
-
-

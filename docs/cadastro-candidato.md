@@ -32,8 +32,15 @@ Esta entrega **não** aplica nada no projeto Supabase de produção. Depois da a
 ## Documentos
 
 - Path: `<interesse_uuid>/<documento_uuid>.<ext>`
-- Sem URL pública. Visualização interna futura deve usar signed URL de curta duração via função autenticada de staff (fora desta entrega).
+- Sem URL pública permanente. O e-mail da Secretaria recebe signed URLs temporárias (`createSignedUrls`, TTL de 7 dias) só dos arquivos daquela candidatura (`<interesse_id>/...`).
+- O bucket `candidaturas-documentos` permanece privado. Signed URLs não são gravadas em log.
 - Token da cartilha **não** autoriza documento de candidatura.
+
+## E-mail da Secretaria
+
+O e-mail final da Secretaria é o dossiê operacional da candidatura: dados do formulário, família, profissão, proponente (somente o nome), as 3 referências pessoais, a referência comercial e a documentação com link temporário. Coleções são lidas com `interesse_id` daquela conclusão.
+
+O e-mail do proponente permanece só a notificação mínima de indicação. Não leva o dossiê.
 
 ## Limite de upload
 

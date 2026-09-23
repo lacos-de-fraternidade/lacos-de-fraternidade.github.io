@@ -7,6 +7,7 @@ import {
   DOC_SIGNED_URL_TTL_SECONDS,
   buildProponenteAviso,
   buildSecretarioDossie,
+  inspectDossieCompleteness,
 } from "../supabase/functions/_shared/email-dossie.js";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -136,8 +137,10 @@ function dossieBeta() {
 
 test("TTL das signed URLs da Secretaria é de 7 dias", () => {
   assert.equal(DOC_SIGNED_URL_TTL_SECONDS, 7 * 24 * 60 * 60);
-  assert.match(read("supabase/functions/registrar-interesse/index.ts"), /DOC_SIGNED_URL_TTL_SECONDS/);
-  assert.match(read("supabase/functions/registrar-interesse/index.ts"), /createSignedUrls/);
+  const loader = read("supabase/functions/_shared/dossie-secretaria.ts");
+  assert.match(loader, /DOC_SIGNED_URL_TTL_SECONDS/);
+  assert.match(loader, /createSignedUrls/);
+  assert.match(read("supabase/functions/registrar-interesse/index.ts"), /loadCandidaturaDossie/);
 });
 
 test("12 e 13: todas as referências pessoais e seus contatos aparecem no e-mail", () => {
@@ -258,12 +261,112 @@ test("25: conclusão repetida não reenvia — used_at é checado antes do e-mai
 });
 
 test("dossiê carrega coleções só da candidatura e signed URL não vai para log", () => {
-  const registrar = read("supabase/functions/registrar-interesse/index.ts");
-  assert.match(registrar, /from\("interesse_referencias"\)[\s\S]*eq\("interesse_id", interesseId\)/);
-  assert.match(registrar, /from\("interesse_referencia_comercial"\)[\s\S]*eq\("interesse_id", interesseId\)/);
-  assert.match(registrar, /from\("interesse_filhos"\)[\s\S]*eq\("interesse_id", interesseId\)/);
-  assert.match(registrar, /startsWith\(prefixo\)/);
-  assert.doesNotMatch(registrar, /console\.(log|error|info)\([^)]*signedUrl/);
-  assert.doesNotMatch(registrar, /console\.(log|error|info)\([^)]*signedByPath/);
+  const loader = read("supabase/functions/_shared/dossie-secretaria.ts");
+  assert.match(loader, /from\("interesse_referencias"\)[\s\S]*eq\("interesse_id", interesseId\)/);
+  assert.match(loader, /from\("interesse_referencia_comercial"\)[\s\S]*eq\("interesse_id", interesseId\)/);
+  assert.match(loader, /from\("interesse_filhos"\)[\s\S]*eq\("interesse_id", interesseId\)/);
+  assert.match(loader, /startsWith\(prefixo\)/);
+  assert.doesNotMatch(loader, /console\.(log|error|info)\([^)]*signedUrl/);
+  assert.doesNotMatch(loader, /console\.(log|error|info)\([^)]*signedByPath/);
   assert.doesNotMatch(read("supabase/functions/_shared/email.ts"), /service_role/);
+});
+
+const EXCLUIDOS_DOSSIE = [
+  "Plano de saúde",
+  "Tipo sanguíneo",
+  "Tratamento de saúde",
+  "Renda mensal",
+  "Renda familiar",
+  "É ou foi militar",
+  "Patente ou graduação",
+  "Local ou organização militar",
+  "Entidades das quais participa",
+  "Responde a processo criminal",
+  "Detalhes do processo",
+  "Possui filiação partidária",
+  "Partido",
+  "AmilPlanoExclusivoXYZ",
+  "ABNEG",
+  "TratamentoSaudeExclusivoXYZ",
+  "RendaMensalExclusiva9999",
+  "RendaFamiliarExclusiva8888",
+  "PatenteMilitarExclusiva",
+  "LocalMilitarExclusivo",
+  "ProcessoCriminalDetalheExclusivo",
+  "PartidoExclusivoXYZ",
+  "EntidadeExclusivaXYZ",
+];
+
+test("dossiê da Secretaria omite saúde, renda, militar, criminal, partido e entidades", () => {
+  const { inner, text } = buildSecretarioDossie(dossieAlfa({
+    interesse: {
+      plano_saude: "AmilPlanoExclusivoXYZ",
+      tipo_sanguineo: "ABNEG",
+      tratamento_saude: "TratamentoSaudeExclusivoXYZ",
+      renda_mensal: "RendaMensalExclusiva9999",
+      renda_familiar: "RendaFamiliarExclusiva8888",
+      foi_militar: true,
+      patente_militar: "PatenteMilitarExclusiva",
+      local_militar: "LocalMilitarExclusivo",
+      processo_criminal: true,
+      processo_criminal_detalhe: "ProcessoCriminalDetalheExclusivo",
+      filiacao_partidaria: true,
+      partido: "PartidoExclusivoXYZ",
+      entidades: "EntidadeExclusivaXYZ",
+    },
+  }));
+  const rendered = `${inner}\n${text}`;
+  for (const item of EXCLUIDOS_DOSSIE) {
+    assert.doesNotMatch(rendered, new RegExp(item.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+  }
+  assert.match(inner, /Candidato Alfa Silva/);
+  assert.match(inner, /390\.533\.447-05/);
+  assert.match(inner, /IFP-RJ/);
+  assert.match(inner, /Tempo de residência/);
+  assert.match(inner, /Empresa Alfa/);
+  assert.match(inner, /Data de admissão/);
+  assert.match(inner, /Irmão Proponente Alfa/);
+  assert.match(inner, /Referencia Alfa Um/);
+  assert.match(inner, /Banco Alfa SA/);
+  assert.match(inner, /Abrir documento/);
+  assert.match(read("supabase/functions/_shared/candidatura.ts"), /plano_saude/);
+  assert.match(read("supabase/functions/_shared/candidatura.ts"), /renda_mensal/);
+  assert.match(read("supabase/functions/_shared/candidatura.ts"), /foi_militar/);
+  assert.match(read("supabase/functions/_shared/candidatura.ts"), /processo_criminal/);
+  assert.match(read("supabase/functions/_shared/candidatura.ts"), /filiacao_partidaria/);
+  assert.match(read("interesse.html"), /Plano de saúde/);
+  assert.match(read("interesse.html"), /Renda mensal/);
+});
+
+test("inspeção de completude não expõe PII e marca dossiê reconstruível", () => {
+  const inspecao = inspectDossieCompleteness(dossieAlfa());
+  assert.equal(inspecao.dados_principais, "OK");
+  assert.equal(inspecao.familia, "OK");
+  assert.equal(inspecao.filhos, "OK");
+  assert.equal(inspecao.profissional, "OK");
+  assert.equal(inspecao.proponente, "OK");
+  assert.equal(inspecao.referencias, "OK");
+  assert.equal(inspecao.comercial, "OK");
+  assert.equal(inspecao.documentos, "OK");
+  assert.equal(inspecao.reconstruivel, "COMPLETA");
+  assert.deepEqual(inspecao.tipos_documentos, ["comprovante_residencia", "identidade"]);
+  assert.equal(JSON.stringify(inspecao).includes("Candidato Alfa Silva"), false);
+  assert.equal(JSON.stringify(inspecao).includes("39053344705"), false);
+});
+
+test("reenvio administrativo só reconstrói e envia à Secretaria", () => {
+  const fn = read("supabase/functions/reenviar-dossie-secretaria/index.ts");
+  const config = read("supabase/config.toml");
+  assert.match(config, /\[functions\.reenviar-dossie-secretaria\][\s\S]*verify_jwt = true/);
+  assert.match(fn, /requireActiveMember/);
+  assert.match(fn, /isStaffProfile/);
+  assert.match(fn, /loadCandidaturaDossie/);
+  assert.match(fn, /sendSecretarioEmail/);
+  assert.match(fn, /acao === "inspecionar"/);
+  assert.doesNotMatch(fn, /sendProponenteEmail/);
+  assert.doesNotMatch(fn, /interesse_upload_token/);
+  assert.doesNotMatch(fn, /used_at/);
+  assert.doesNotMatch(fn, /\.update\(/);
+  assert.doesNotMatch(fn, /\.insert\(/);
+  assert.doesNotMatch(fn, /status:\s*"Recebida"/);
 });

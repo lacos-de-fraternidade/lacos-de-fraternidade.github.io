@@ -11,6 +11,7 @@ Esta entrega **não** aplica nada no projeto Supabase de produção. Depois da a
    - `registrar-interesse` (alterada)
    - `buscar-proponente` (nova)
    - `enviar-documento-candidatura` (nova)
+   - `reenviar-dossie-secretaria` (administrativa, `verify_jwt = true`; só após autorização explícita)
 3. O bucket privado `candidaturas-documentos` entra pela própria migration (5 MB, PDF/JPEG/PNG). **Não** reutilizar `cartilha`.
 
 ## Modelagem
@@ -38,9 +39,13 @@ Esta entrega **não** aplica nada no projeto Supabase de produção. Depois da a
 
 ## E-mail da Secretaria
 
-O e-mail final da Secretaria é o dossiê operacional da candidatura: dados do formulário, família, profissão, proponente (somente o nome), as 3 referências pessoais, a referência comercial e a documentação com link temporário. Coleções são lidas com `interesse_id` daquela conclusão.
+O e-mail final da Secretaria é o dossiê operacional da candidatura. Coleções são lidas com `interesse_id` daquela conclusão. O dossiê inclui identificação, documentos de identidade, filiação, contatos, endereço residencial, família aplicável, filhos, escolaridade, dados profissionais operacionais, proponente (somente o nome), referências pessoais, referência comercial quando houver, motivação, protocolo/status e documentos com signed URL.
+
+Não entram no e-mail — embora continuem sendo coletados e persistidos — tipo sanguíneo, plano de saúde, tratamento de saúde, renda mensal, renda familiar, dados militares, processo criminal, filiação partidária e entidades.
 
 O e-mail do proponente permanece só a notificação mínima de indicação. Não leva o dossiê.
+
+Uma candidatura já concluída pode gerar de novo o dossiê atual pela Edge Function administrativa `reenviar-dossie-secretaria` (`verify_jwt = true`, staff ativo). A operação só lê os dados persistidos, emite novas signed URLs e reenvia à Secretaria. Não reabre a candidatura, não altera `used_at`/`status`, não duplica coleções e não notifica o proponente.
 
 ## Limite de upload
 

@@ -94,16 +94,6 @@ function estadoCivilLabel(value) {
   return ESTADO_CIVIL_LABELS[String(value || "")] || display(value);
 }
 
-function planoLabel(value) {
-  if (String(value || "") === "nao_possui") return "Não possui";
-  return display(value);
-}
-
-function tipoSanguineoLabel(value) {
-  if (String(value || "") === "nao_informado") return "Não informado";
-  return display(value);
-}
-
 function sexoLabel(value) {
   if (value === "masculino") return "Masculino";
   if (value === "feminino") return "Feminino";
@@ -177,9 +167,6 @@ export function buildSecretarioDossie(input) {
       row("WhatsApp", formatPhone(data.whatsapp)),
       row("E-mail", display(data.email)),
       row("Telefone de emergência", formatPhone(data.telefone_emergencia)),
-      row("Plano de saúde", planoLabel(data.plano_saude)),
-      row("Tipo sanguíneo", tipoSanguineoLabel(data.tipo_sanguineo)),
-      row("Tratamento de saúde", display(data.tratamento_saude)),
     ].join(""))),
     section("Endereço", table([
       row("CEP", formatCep(data.cep)),
@@ -232,8 +219,6 @@ export function buildSecretarioDossie(input) {
     row("Especialização", display(data.especializacao)),
     row("Profissão", display(data.profissao)),
     row("Especialidade profissional", display(data.especialidade_profissional)),
-    row("Renda mensal", display(data.renda_mensal)),
-    row("Renda familiar", display(data.renda_familiar)),
     row("Empresa", display(data.empresa)),
     row("Cargo ou função", display(data.cargo_empresa)),
     row("Data de admissão", formatDate(data.data_admissao_empresa)),
@@ -246,26 +231,8 @@ export function buildSecretarioDossie(input) {
     row("País profissional", display(data.empresa_pais)),
     row("Telefone profissional", data.empresa_telefone ? formatPhone(data.empresa_telefone) : "—"),
     row("Ramal", display(data.empresa_ramal)),
-    row("É ou foi militar", yesNo(data.foi_militar)),
+    row("Outras informações", display(data.outras_informacoes)),
   ];
-  if (data.foi_militar) {
-    profissionalRows.push(
-      row("Patente ou graduação", display(data.patente_militar)),
-      row("Local ou organização militar", display(data.local_militar)),
-    );
-  }
-  profissionalRows.push(
-    row("Entidades das quais participa", display(data.entidades)),
-    row("Responde a processo criminal", yesNo(data.processo_criminal)),
-  );
-  if (data.processo_criminal) {
-    profissionalRows.push(row("Detalhes do processo", display(data.processo_criminal_detalhe)));
-  }
-  profissionalRows.push(row("Possui filiação partidária", yesNo(data.filiacao_partidaria)));
-  if (data.filiacao_partidaria) {
-    profissionalRows.push(row("Partido", display(data.partido)));
-  }
-  profissionalRows.push(row("Outras informações", display(data.outras_informacoes)));
   innerParts.push(section("Informações profissionais e outras informações", table(profissionalRows.join(""))));
 
   innerParts.push(section("Proponente", table(row("Irmão que o convidou a ser iniciado", proponenteNome))));
@@ -353,6 +320,59 @@ export function buildSecretarioDossie(input) {
     title: "Cadastro do candidato",
     inner: innerParts.join(""),
     text: textLines.join("\n"),
+  };
+}
+
+function filled(value) {
+  return String(value ?? "").trim() !== "";
+}
+
+function flag(ok, aplicavel = true) {
+  if (!aplicavel) return "NÃO APLICÁVEL";
+  return ok ? "OK" : "AUSENTE";
+}
+
+export function inspectDossieCompleteness(input) {
+  const data = input?.interesse || {};
+  const filhos = Array.isArray(input?.filhos) ? input.filhos : [];
+  const referencias = Array.isArray(input?.referencias) ? input.referencias : [];
+  const comercial = input?.comercial || null;
+  const documentos = Array.isArray(input?.documentos) ? input.documentos : [];
+  const estadoCivil = String(data.estado_civil || "");
+  const refsValidas = referencias.filter((item) => filled(item?.nome) && filled(item?.telefone));
+  const familiaOk = isConjuge(estadoCivil)
+    ? filled(data.familiar_nome) && Boolean(data.data_casamento)
+    : isMaeConsentimento(estadoCivil)
+      ? filled(data.familiar_nome)
+      : estadoCivil === "viuvo" || estadoCivil === "outro"
+        ? filled(data.situacao_familiar)
+        : false;
+  const dadosOk = [
+    data.id, data.nome, data.cpf, data.rg, data.rg_orgao, data.rg_expedicao,
+    data.nome_mae, data.naturalidade, data.nacionalidade, data.whatsapp, data.email,
+    data.logradouro, data.cep, data.tempo_residencia, data.motivacao,
+  ].every(filled);
+  const profissionalOk = [data.grau_instrucao, data.formacao, data.profissao, data.empresa, data.cargo_empresa].every(filled);
+  const proponenteOk = filled(input?.proponenteNome);
+  const filhosOk = data.possui_filhos === true ? filhos.length > 0 : data.possui_filhos === false;
+  const comercialOk = Boolean(comercial && filled(comercial.razao_social));
+  const docsOk = documentos.length > 0 && documentos.every((doc) => filled(doc?.tipo));
+  const ausencias = [
+    dadosOk, familiaOk, filhosOk, profissionalOk, proponenteOk, refsValidas.length === 3, docsOk,
+  ].filter((item) => !item).length;
+
+  return {
+    dados_principais: flag(dadosOk),
+    familia: flag(familiaOk, Boolean(estadoCivil)),
+    filhos: flag(filhosOk, data.possui_filhos !== false),
+    profissional: flag(profissionalOk),
+    proponente: flag(proponenteOk),
+    referencias: flag(refsValidas.length === 3),
+    comercial: comercialOk ? "OK" : "NÃO APLICÁVEL",
+    documentos: flag(docsOk),
+    n_docs: documentos.length,
+    tipos_documentos: documentos.map((doc) => String(doc?.tipo || "")).filter(Boolean).sort(),
+    reconstruivel: ausencias === 0 ? "COMPLETA" : dadosOk && docsOk ? "PARCIAL" : "NÃO RECONSTRUÍVEL",
   };
 }
 

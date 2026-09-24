@@ -2,6 +2,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.8";
 import { hasValidPublishableKey, unauthorizedResponse } from "../_shared/auth.ts";
 import { jsonResponse, optionsResponse } from "../_shared/cors.ts";
 import { randomToken, sha256Hex } from "../_shared/crypto.ts";
+import { runConclusaoCandidatura } from "../_shared/conclusao-candidatura.js";
 import { loadCandidaturaDossie, resolveProponenteEmail } from "../_shared/dossie-secretaria.ts";
 import { sendProponenteEmail, sendSecretarioEmail } from "../_shared/email.ts";
 import { normalizeCandidatura, requiredDocumentTypes } from "../_shared/candidatura.ts";
@@ -160,81 +161,80 @@ async function concluirCandidatura(
   const token = String(payload.token || payload.uploadToken || "").trim();
   if (!token) return jsonResponse(req, 400, { ok: false, error: "Envio de documentos inválido." });
   const tokenHash = await sha256Hex(token);
-  const { data: uploadRow } = await supabase
-    .from("interesse_upload_token")
-    .select("id, interesse_id, expires_at, used_at")
-    .eq("token_hash", tokenHash)
-    .maybeSingle();
-  if (!uploadRow || uploadRow.used_at || new Date(uploadRow.expires_at).getTime() <= Date.now()) {
-    return jsonResponse(req, 410, { ok: false, error: "O envio expirou. Fale com a Secretaria se já enviou os dados." });
-  }
 
-  const loaded = await loadCandidaturaDossie(supabase, String(uploadRow.interesse_id));
-  if (!loaded.ok) return jsonResponse(req, 404, { ok: false, error: loaded.error });
-  if (loaded.missingDocumentos.length) {
-    return jsonResponse(req, 422, {
-      ok: false,
-      error: "Há documentos obrigatórios pendentes.",
-      documentosPendentes: loaded.missingDocumentos,
-    });
-  }
-
-  const interesse = loaded.payload.interesse;
-  const irmao = loaded.irmao;
-
-  const cartilhaToken = randomToken();
-  const { error: cartilhaError } = await supabase.from("cartilha_token").insert({
-    interesse_id: interesse.id,
-    token_hash: await sha256Hex(cartilhaToken),
-    expires_at: new Date(Date.now() + TOKEN_TTL_MINUTES * 60 * 1000).toISOString(),
-  });
-  if (cartilhaError) console.error("cartilha_token", cartilhaError.code || "erro");
-
-  let secretaryEmailSent = false;
-  let proponenteNotificacao = "nao_enviada";
-  try {
-    const secretary = await sendSecretarioEmail({
-      ...loaded.payload,
-      interesse: { ...interesse, documentacao_completa: true },
-    });
-    secretaryEmailSent = Boolean(secretary.sent);
-  } catch (error) {
-    console.error("Falha no e-mail do secretário", { name: error instanceof Error ? error.name : "erro" });
-  }
-
-  try {
-    const resolved = await resolveProponenteEmail(supabase, irmao);
-    if (!resolved.ok) {
-      proponenteNotificacao = "falha";
-    } else if (!resolved.email) {
-      proponenteNotificacao = "sem_email";
-    } else {
-      const sent = await sendProponenteEmail({
-        to: resolved.email,
-        candidatoNome: String(interesse.nome || ""),
-        proponenteNome: String(irmao?.nome || ""),
+  const concluded = await runConclusaoCandidatura({ tokenHash }, {
+    async claim(hash: string) {
+      const { data, error } = await supabase.rpc("claim_conclusao_candidatura", { p_token_hash: hash });
+      if (error) {
+        console.error("conclusao claim", { code: error.code || "erro" });
+        throw new Error("claim");
+      }
+      return Array.isArray(data) ? data[0] : data;
+    },
+    loadDossie: (interesseId: string) => loadCandidaturaDossie(supabase, interesseId),
+    async release(tokenId: string) {
+      const { error } = await supabase.rpc("release_conclusao_claim", { p_token_id: tokenId });
+      if (error) console.error("conclusao release", { code: error.code || "erro" });
+    },
+    async criarCartilha(interesseId: string) {
+      const cartilhaToken = randomToken();
+      const { error } = await supabase.from("cartilha_token").insert({
+        interesse_id: interesseId,
+        token_hash: await sha256Hex(cartilhaToken),
+        expires_at: new Date(Date.now() + TOKEN_TTL_MINUTES * 60 * 1000).toISOString(),
       });
-      proponenteNotificacao = sent.sent ? "enviada" : "falha";
-    }
-  } catch (error) {
-    console.error("Falha no e-mail do proponente", { name: error instanceof Error ? error.name : "erro" });
-    proponenteNotificacao = "falha";
-  }
-
-  await supabase.from("interesse").update({
-    status: "Recebida",
-    documentacao_completa: true,
-    notificacao_proponente: proponenteNotificacao,
-  }).eq("id", interesse.id);
-  await supabase.from("interesse_upload_token").update({
-    used_at: new Date().toISOString(),
-  }).eq("id", uploadRow.id);
-
-  return jsonResponse(req, 200, {
-    ok: true,
-    registrationSuccess: true,
-    secretaryEmailSent,
-    token: cartilhaError ? null : cartilhaToken,
-    expiresInMinutes: TOKEN_TTL_MINUTES,
+      if (error) {
+        console.error("cartilha_token", error.code || "erro");
+        return { token: null, expiresInMinutes: TOKEN_TTL_MINUTES };
+      }
+      return { token: cartilhaToken, expiresInMinutes: TOKEN_TTL_MINUTES };
+    },
+    async enviarEmails(loaded: { payload: { interesse: Record<string, unknown> }; irmao: { nome?: string | null } | null }) {
+      const interesse = loaded.payload.interesse;
+      let secretaryEmailSent = false;
+      let proponenteNotificacao = "nao_enviada";
+      try {
+        const secretary = await sendSecretarioEmail({
+          ...loaded.payload,
+          interesse: { ...interesse, documentacao_completa: true },
+        });
+        secretaryEmailSent = Boolean(secretary.sent);
+      } catch (error) {
+        console.error("Falha no e-mail do secretário", { name: error instanceof Error ? error.name : "erro" });
+      }
+      try {
+        const resolved = await resolveProponenteEmail(supabase, loaded.irmao);
+        if (!resolved.ok) {
+          proponenteNotificacao = "falha";
+        } else if (!resolved.email) {
+          proponenteNotificacao = "sem_email";
+        } else {
+          const sent = await sendProponenteEmail({
+            to: resolved.email,
+            candidatoNome: String(interesse.nome || ""),
+            proponenteNome: String(loaded.irmao?.nome || ""),
+          });
+          proponenteNotificacao = sent.sent ? "enviada" : "falha";
+        }
+      } catch (error) {
+        console.error("Falha no e-mail do proponente", { name: error instanceof Error ? error.name : "erro" });
+        proponenteNotificacao = "falha";
+      }
+      return { secretaryEmailSent, proponenteNotificacao };
+    },
+    async finalize(input: { tokenId: string; interesseId: string; notificacao: string }) {
+      const { data, error } = await supabase.rpc("finalize_conclusao_candidatura", {
+        p_token_id: input.tokenId,
+        p_interesse_id: input.interesseId,
+        p_notificacao: input.notificacao,
+      });
+      if (error) {
+        console.error("conclusao finalize", { code: error.code || "erro" });
+        return false;
+      }
+      return data === true;
+    },
   });
+
+  return jsonResponse(req, concluded.status, concluded.body);
 }

@@ -45,7 +45,17 @@ Não entram no e-mail — embora continuem sendo coletados e persistidos — CPF
 
 O e-mail do proponente permanece só a notificação mínima de indicação. Não leva o dossiê. O endereço é resolvido primeiro em `irmaos_autorizados` (e-mail do acesso Myosotis) e só depois em `irmaos.email`. Se uma estratégia já encontrou um endereço válido, a consulta seguinte não é executada e não pode invalidá-lo. O envio só é sucesso quando o SMTP institucional aceita a mensagem; caso contrário a conclusão grava `notificacao_proponente = falha`. Erro de consulta não vira `sem_email`.
 
-Uma candidatura já concluída pode gerar de novo o dossiê atual pela Edge Function administrativa `reenviar-dossie-secretaria` (`verify_jwt = true`, staff ativo). A operação só lê os dados persistidos, emite novas signed URLs e reenvia à Secretaria pelo mesmo helper SMTP. Não reabre a candidatura, não altera `used_at`/`status`, não duplica coleções e não notifica o proponente.
+Uma candidatura já concluída pode gerar de novo o dossiê atual pela Edge Function administrativa `reenviar-dossie-secretaria` (`verify_jwt = true`, staff ativo). A operação só lê os dados persistidos, emite novas signed URLs e reenvia à Secretaria pelo mesmo helper SMTP. Não reabre a candidatura, não altera `used_at`/`status`, não duplica coleções e não notifica o proponente. A idempotência da conclusão pública não bloqueia esse reenvio deliberado.
+
+## Conclusão pública — claim e fail-closed
+
+A conclusão (`acao=concluir`) adquire um lease atômico de 2 minutos em `interesse_upload_token` (`claim_conclusao_candidatura`). Só quem adquire o claim envia dossiê e aviso do proponente. A segunda requisição concorrente recebe `409`. Token já usado continua `410`.
+
+Se o carregamento do dossiê falhar ou faltarem documentos, o claim é liberado (`release_conclusao_claim`) e o retry permanece possível. Depois dos envios, `finalize_conclusao_candidatura` grava `used_at` e o estado da candidatura na mesma transação.
+
+SMTP não participa da transação do banco: se o servidor aceitar o e-mail e a persistência final falhar, um retry posterior pode duplicar a mensagem. O reenvio administrativo cobre a Secretaria nesse caso.
+
+`loadCandidaturaDossie` é fail-closed: erro de consulta em filhos, referências, comercial, proponente, documentos ou signed URL não vira coleção vazia e não envia dossiê incompleto.
 
 ## Infraestrutura de e-mail
 

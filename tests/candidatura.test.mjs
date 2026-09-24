@@ -195,6 +195,8 @@ test("comprovante de residência é obrigatório de ponta a ponta", () => {
   const migration = read("supabase/migrations/20260916213000_comprovante_residencia.sql");
   assert.match(js, /comprovante_residencia: "Comprovante de residência"/);
   assert.doesNotMatch(js, /Comprovante de residência recente/);
+  assert.doesNotMatch(read("docs/cadastro-candidato.md"), /residência recente|residencia recente/i);
+  assert.doesNotMatch(migration, /residência recente|residencia recente/i);
   assert.match(js, /"comprovante_residencia"/);
   assert.match(shared, /"comprovante_residencia"/);
   assert.match(migration, /comprovante_residencia/);

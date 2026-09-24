@@ -86,7 +86,7 @@ Não usar `supabase config pull` / `config push` só para copiar SMTP do Auth.
 
 O teto é `MAX_DOC_MB` em `supabase/functions/_shared/candidatura.ts` e `maxDocMb` em `config.js`. Hoje vale **5 MB**. Alterar esses dois pontos (e o `file_size_limit` do bucket, se for o caso) basta para uma futura mudança para 10 MB.
 
-## Comprovante de residência recente
+## Comprovante de residência
 
 - Tipo documental `comprovante_residencia`. Obrigatório na V1, mesmos MIME e tamanho dos demais. Não há recorte institucional de 30/60/90 dias nesta entrega.
 - A migration incremental `20260916213000_comprovante_residencia.sql` precisa estar **aplicada no banco local** (`npx supabase migration up --local`) antes do smoke. Sem ela, o CHECK original rejeita o INSERT após o upload no Storage.

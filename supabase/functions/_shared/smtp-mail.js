@@ -57,11 +57,72 @@ export function encodeSmtpData(text) {
   return String(text ?? "").replace(/\r?\n/g, "\r\n").replace(/^\./gm, "..");
 }
 
+export function sanitizeHeaderText(value) {
+  return String(value ?? "").replace(/[\r\n\x00]+/g, " ").replace(/\s+/g, " ").trim();
+}
+
+export function sanitizeSmtpAddress(value) {
+  const clean = sanitizeHeaderText(value);
+  const match = clean.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
+  return match ? match[0] : "";
+}
+
+export function needsMimeEncode(value) {
+  return /[^\x20-\x7E]/.test(String(value ?? ""));
+}
+
+export function encodeUtf8Base64(value) {
+  const bytes = new TextEncoder().encode(String(value ?? ""));
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary);
+}
+
+export function encodeMimeWord(value) {
+  const clean = sanitizeHeaderText(value);
+  if (!clean) return "";
+  if (!needsMimeEncode(clean)) return clean;
+  return `=?UTF-8?B?${encodeUtf8Base64(clean)}?=`;
+}
+
+export function encodeMailboxHeader(displayName, address) {
+  const email = sanitizeSmtpAddress(address);
+  const name = encodeMimeWord(displayName);
+  if (!email) return "";
+  return name ? `${name} <${email}>` : email;
+}
+
+export function extractSmtpLines(buffer) {
+  const text = String(buffer ?? "");
+  const lines = [];
+  let start = 0;
+  while (true) {
+    const idx = text.indexOf("\r\n", start);
+    if (idx < 0) return { lines, leftover: text.slice(start) };
+    lines.push(text.slice(start, idx));
+    start = idx + 2;
+  }
+}
+
+export function parseSmtpReplyLines(lines) {
+  const texts = [];
+  for (const line of lines) {
+    const parsed = parseSmtpCode(line);
+    if (!parsed) return { complete: true, code: 0, text: "", error: "smtp reply" };
+    texts.push(parsed.text);
+    if (!parsed.more) return { complete: true, code: parsed.code, text: texts.join("\n") };
+  }
+  return { complete: false, code: 0, text: texts.join("\n") };
+}
+
 export function buildSmtpMime(config, options) {
-  const from = `${config.senderName} <${config.user}>`;
-  const to = String(options.to || "").trim();
-  const subject = String(options.subject || "").replace(/[\r\n]+/g, " ");
-  const replyTo = String(options.replyTo || "").trim();
+  const from = encodeMailboxHeader(config.senderName, config.user);
+  const to = sanitizeSmtpAddress(options.to);
+  const subject = encodeMimeWord(options.subject);
+  const replyName = sanitizeHeaderText(options.replyToName || "");
+  const replyTo = replyName
+    ? encodeMailboxHeader(replyName, options.replyTo)
+    : sanitizeSmtpAddress(options.replyTo);
   const headers = [
     `From: ${from}`,
     `To: ${to}`,

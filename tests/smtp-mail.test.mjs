@@ -5,11 +5,16 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   SMTP_DEFAULTS,
+  buildSmtpMime,
   classifySmtpError,
   classifySmtpReply,
+  encodeMimeWord,
   encodeSmtpData,
+  encodeUtf8Base64,
+  extractSmtpLines,
   isSmtpAccepted,
   parseSmtpCode,
+  parseSmtpReplyLines,
   readSmtpConfig,
   sendSmtpMail,
   sendTransactionalEmail,
@@ -147,6 +152,100 @@ test("sucesso SMTP só quando o servidor aceita a mensagem", async () => {
   assert.equal(result.status, 250);
   assert.equal(result.name, "aceito");
   assert.equal(result.id, "queue-1");
+});
+
+test("MIME UTF-8 usa encoded-word nos headers e preserva o corpo", () => {
+  const config = readSmtpConfig(validEnv);
+  const mime = buildSmtpMime(config, {
+    to: "dest@invalid.test",
+    subject: "Notificação do proponente",
+    text: "Cadastro do candidato\nARLS Laços de Fraternidade",
+    html: "<p>Cadastro do candidato</p><p>ARLS Laços de Fraternidade</p>",
+  });
+  const [headerBlock, ...rest] = mime.split("\r\n\r\n");
+  const body = rest.join("\r\n\r\n");
+  const fromEncoded = encodeMimeWord("ARLS Laços de Fraternidade");
+  const subjectEncoded = encodeMimeWord("Notificação do proponente");
+  assert.equal(fromEncoded, `=?UTF-8?B?${encodeUtf8Base64("ARLS Laços de Fraternidade")}?=`);
+  assert.equal(subjectEncoded, `=?UTF-8?B?${encodeUtf8Base64("Notificação do proponente")}?=`);
+  assert.equal(headerBlock.includes(`From: ${fromEncoded} <loja@invalid.test>`), true);
+  assert.equal(headerBlock.includes(`Subject: ${subjectEncoded}`), true);
+  assert.match(headerBlock, /^To: dest@invalid.test$/m);
+  assert.doesNotMatch(headerBlock, /Laços|Notificação/);
+  assert.equal(encodeMimeWord("Cadastro do candidato"), "Cadastro do candidato");
+  assert.match(headerBlock, /Content-Type: multipart\/alternative; boundary="lacos-mail"/);
+  assert.match(body, /Content-Type: text\/plain; charset=utf-8/);
+  assert.match(body, /Content-Type: text\/html; charset=utf-8/);
+  assert.match(body, /Cadastro do candidato/);
+  assert.match(body, /ARLS Laços de Fraternidade/);
+});
+
+test("headers SMTP bloqueiam CR/LF e não codificam o endereço", () => {
+  const config = readSmtpConfig({
+    ...validEnv,
+    SMTP_SENDER_NAME: "Loja\r\nBcc: evil@invalid.test",
+  });
+  const mime = buildSmtpMime(config, {
+    to: "dest@invalid.test\r\nCc: evil@invalid.test",
+    subject: "Assunto\r\nBcc: evil@invalid.test",
+    replyTo: "alfa@invalid.test\r\nBcc: evil@invalid.test",
+    text: "ok",
+    html: "<p>ok</p>",
+  });
+  const headerBlock = mime.split("\r\n\r\n")[0];
+  assert.doesNotMatch(headerBlock, /\nBcc:/);
+  assert.doesNotMatch(headerBlock, /\rBcc:/);
+  assert.match(headerBlock, /^To: dest@invalid.test$/m);
+  assert.match(headerBlock, /^Reply-To: alfa@invalid.test$/m);
+  assert.doesNotMatch(headerBlock, /=\?UTF-8\?B\?.*dest@invalid\.test/);
+});
+
+test("resposta SMTP multiline e fragmentada só completa no último código", () => {
+  const first = extractSmtpLines("250-smtp.gmail.com\r\n250-PIPE");
+  assert.deepEqual(first.lines, ["250-smtp.gmail.com"]);
+  assert.equal(first.leftover, "250-PIPE");
+  const second = extractSmtpLines(`${first.leftover}LINING\r\n250 SMTPUTF8\r\n`);
+  assert.deepEqual(second.lines, ["250-PIPELINING", "250 SMTPUTF8"]);
+  assert.equal(second.leftover, "");
+  assert.deepEqual(parseSmtpReplyLines(["250-smtp.gmail.com", "250-PIPELINING"]), {
+    complete: false,
+    code: 0,
+    text: "smtp.gmail.com\nPIPELINING",
+  });
+  assert.deepEqual(parseSmtpReplyLines(["250-smtp.gmail.com", "250-PIPELINING", "250 SMTPUTF8"]), {
+    complete: true,
+    code: 250,
+    text: "smtp.gmail.com\nPIPELINING\nSMTPUTF8",
+  });
+});
+
+test("dot-stuffing e CRLF são aplicados no payload SMTP", () => {
+  assert.equal(encodeSmtpData("linha\n.secreta\n."), "linha\r\n..secreta\r\n..");
+  const mime = buildSmtpMime(readSmtpConfig(validEnv), {
+    to: "dest@invalid.test",
+    subject: "Cadastro do candidato",
+    text: ".linha\n.segunda",
+    html: "<p>ok</p>",
+  });
+  const stuffed = encodeSmtpData(mime);
+  assert.match(stuffed, /\r\n\.\.linha\r\n\.\.segunda/);
+  const headerBlock = stuffed.split("\r\n\r\n")[0];
+  assert.equal(headerBlock.includes("\r\n"), true);
+  assert.equal(headerBlock.replace(/\r\n/g, "").includes("\n"), false);
+});
+
+test("250 após DATA é sucesso e a conexão do cliente é encerrada", async () => {
+  const result = await sendSmtpMail(
+    { to: "dest@invalid.test", subject: "Cadastro do candidato", text: "ok", html: "<p>ok</p>" },
+    { config: readSmtpConfig(validEnv), transport: async () => ({ status: 250, name: "aceito" }) },
+  );
+  assert.equal(result.sent, true);
+  assert.equal(result.status, 250);
+  const emailer = read("supabase/functions/_shared/email.ts");
+  assert.match(emailer, /const close = \(\) =>/);
+  assert.match(emailer, /finally \{\s*close\(\);/s);
+  assert.match(emailer, /onTimeout\?\.\(\)/);
+  assert.match(emailer, /await sock.command\("QUIT"\)/);
 });
 
 test("dossiê, proponente e reenvio compartilham o helper SMTP", () => {

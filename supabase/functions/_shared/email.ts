@@ -3,7 +3,8 @@ import {
   buildSmtpMime,
   classifySmtpReply,
   encodeSmtpData,
-  parseSmtpCode,
+  parseSmtpReplyLines,
+  sanitizeSmtpAddress,
   sendTransactionalEmail,
 } from "./smtp-mail.js";
 
@@ -130,15 +131,15 @@ class SmtpSocket {
   }
 
   async readReply() {
-    const texts: string[] = [];
+    const lines: string[] = [];
     while (true) {
-      const parsed = parseSmtpCode(await this.readLine());
-      if (!parsed) {
-        const error = new Error("smtp reply");
+      lines.push(await this.readLine());
+      const reply = parseSmtpReplyLines(lines);
+      if (reply.error) {
+        const error = new Error(reply.error);
         throw error;
       }
-      texts.push(parsed.text);
-      if (!parsed.more) return { code: parsed.code, text: texts.join("\n") };
+      if (reply.complete) return { code: reply.code, text: reply.text };
     }
   }
 
@@ -194,10 +195,10 @@ export async function denoSmtpTransport(
       const passReply = await sock.command(btoa(config.pass));
       if (passReply.code !== 235) return { status: passReply.code, name: "autenticacao" };
 
-      const mail = await sock.command(`MAIL FROM:<${config.user}>`);
+      const mail = await sock.command(`MAIL FROM:<${sanitizeSmtpAddress(config.user)}>`);
       if (mail.code !== 250) return { status: mail.code, name: classifySmtpReply(mail.code).name };
 
-      const rcpt = await sock.command(`RCPT TO:<${options.to}>`);
+      const rcpt = await sock.command(`RCPT TO:<${sanitizeSmtpAddress(options.to)}>`);
       if (rcpt.code !== 250 && rcpt.code !== 251) return { status: rcpt.code, name: "destinatario" };
 
       const data = await sock.command("DATA");

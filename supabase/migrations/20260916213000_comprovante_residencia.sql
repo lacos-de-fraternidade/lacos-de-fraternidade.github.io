@@ -1,4 +1,4 @@
--- Inclui comprovante de residência recente nos documentos da candidatura.
+-- Inclui comprovante de residência nos documentos da candidatura.
 -- Incremental: não recria tabelas nem altera produção remotamente nesta rodada.
 
 alter table public.interesse_documentos
@@ -17,4 +17,4 @@ alter table public.interesse_documentos
   ));
 
 comment on column public.interesse_documentos.tipo is
-  'Tipo documental da candidatura. comprovante_residencia = comprovante de residência recente.';
+  'Tipo documental da candidatura. comprovante_residencia = comprovante de residência.';

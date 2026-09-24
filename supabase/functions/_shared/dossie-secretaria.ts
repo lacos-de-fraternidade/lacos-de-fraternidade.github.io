@@ -1,8 +1,10 @@
 import { requiredDocumentTypes } from "./candidatura.ts";
+import { evaluateDossieQueries, evaluateSignedUrl } from "./conclusao-candidatura.js";
 import { DOC_SIGNED_URL_TTL_SECONDS, documentoDownloadName, inspectDossieCompleteness, resolveProponenteFromLookups } from "./email-dossie.js";
 
 type QueryClient = {
   from: (table: string) => any;
+  rpc?: (fn: string, args?: Record<string, unknown>) => Promise<any>;
   storage: {
     from: (bucket: string) => {
       createSignedUrl: (
@@ -14,45 +16,52 @@ type QueryClient = {
   };
 };
 
-export async function loadCandidaturaDossie(supabase: QueryClient, interesseId: string) {
-  const { data: interesse } = await supabase
-    .from("interesse")
-    .select("*")
-    .eq("id", interesseId)
-    .maybeSingle();
-  if (!interesse) return { ok: false as const, error: "Cadastro não encontrado." };
+function consultaFalhou(dependencia: string, code?: string) {
+  console.error("dossie consulta", { dependencia, code: code || "erro" });
+  return { ok: false as const, error: "Não foi possível montar o dossiê.", status: 500 };
+}
 
-  const [{ data: filhos }, { data: referencias }, { data: comercial }, { data: irmao }, { data: docs }] = await Promise.all([
+export async function loadCandidaturaDossie(supabase: QueryClient, interesseId: string) {
+  const interesseRes = await supabase.from("interesse").select("*").eq("id", interesseId).maybeSingle();
+  const [filhosRes, referenciasRes, comercialRes, irmaoRes, docsRes] = await Promise.all([
     supabase.from("interesse_filhos").select("nome, sexo, data_nascimento, ordem").eq("interesse_id", interesseId).order("ordem"),
     supabase.from("interesse_referencias").select("ordem, nome, telefone, logradouro, bairro, cidade, estado, cep").eq("interesse_id", interesseId).order("ordem"),
     supabase.from("interesse_referencia_comercial").select("razao_social, telefone, logradouro, bairro, cidade, estado, cep").eq("interesse_id", interesseId).maybeSingle(),
-    supabase.from("irmaos").select("id, nome, email, auth_member_id").eq("id", interesse.proponente_id).maybeSingle(),
+    supabase.from("irmaos").select("id, nome, email, auth_member_id").eq("id", interesseRes.data?.proponente_id).maybeSingle(),
     supabase.from("interesse_documentos").select("tipo, storage_path, mime, tamanho, nome_original").eq("interesse_id", interesseId),
   ]);
 
+  const assembled = evaluateDossieQueries({
+    interesse: interesseRes,
+    filhos: filhosRes,
+    referencias: referenciasRes,
+    comercial: comercialRes,
+    proponente: irmaoRes,
+    documentos: docsRes,
+  });
+  if (!assembled.ok && assembled.notFound) return { ok: false as const, error: "Cadastro não encontrado.", status: 404 };
+  if (!assembled.ok) return consultaFalhou(assembled.dependencia || "dossie", interesseRes.error?.code);
+
+  const interesse = assembled.interesse;
   const prefixo = `${interesseId}/`;
-  const documentosProprios = (docs || []).filter((row: { storage_path?: string }) => String(row.storage_path || "").startsWith(prefixo));
-  let signedByPath = new Map<string, string>();
-  if (documentosProprios.length) {
-    const signedEntries = await Promise.all(
-      documentosProprios.map(async (row: { tipo: string; nome_original: string; storage_path: string }) => {
-        const filename = documentoDownloadName(row.tipo, row.nome_original, row.storage_path);
-        const { data, error } = await supabase.storage
-          .from("candidaturas-documentos")
-          .createSignedUrl(row.storage_path, DOC_SIGNED_URL_TTL_SECONDS, { download: filename });
-        if (error) console.error("candidaturas-documentos signed-url", error.statusCode || "erro");
-        return [row.storage_path, data?.signedUrl || null] as const;
-      }),
-    );
-    signedByPath = new Map(signedEntries.filter((entry): entry is readonly [string, string] => Boolean(entry[1])));
+  const documentosProprios = assembled.documentos.filter((row: { storage_path?: string }) => String(row.storage_path || "").startsWith(prefixo));
+  const signedByPath = new Map<string, string>();
+  for (const row of documentosProprios as { tipo: string; nome_original: string; storage_path: string }[]) {
+    const filename = documentoDownloadName(row.tipo, row.nome_original, row.storage_path);
+    const signed = await supabase.storage
+      .from("candidaturas-documentos")
+      .createSignedUrl(row.storage_path, DOC_SIGNED_URL_TTL_SECONDS, { download: filename });
+    const evaluated = evaluateSignedUrl(signed);
+    if (!evaluated.ok) return consultaFalhou("signed_url", signed.error?.statusCode);
+    signedByPath.set(row.storage_path, evaluated.url);
   }
 
   const payload = {
     interesse,
-    proponenteNome: irmao?.nome || null,
-    filhos: filhos || [],
-    referencias: referencias || [],
-    comercial: comercial || null,
+    proponenteNome: assembled.proponente?.nome || null,
+    filhos: assembled.filhos,
+    referencias: assembled.referencias,
+    comercial: assembled.comercial || null,
     documentos: documentosProprios.map((row: { tipo: string; nome_original: string; mime: string; tamanho: number; storage_path: string }) => ({
       tipo: row.tipo,
       nome_original: row.nome_original,
@@ -68,7 +77,7 @@ export async function loadCandidaturaDossie(supabase: QueryClient, interesseId: 
   return {
     ok: true as const,
     payload,
-    irmao: irmao || null,
+    irmao: assembled.proponente || null,
     missingDocumentos,
     inspecao: inspectDossieCompleteness(payload),
   };

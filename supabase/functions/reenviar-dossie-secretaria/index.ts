@@ -42,7 +42,7 @@ Deno.serve(async (req) => {
 
   const loaded = await loadCandidaturaDossie(serviceClient(), interesseId);
   if (!loaded.ok) {
-    return jsonResponse(req, 404, { ok: false, error: loaded.error });
+    return jsonResponse(req, loaded.status || 500, { ok: false, error: loaded.error });
   }
 
   const inspecao = {

@@ -268,13 +268,14 @@ test("24: e-mail do proponente continua só com a notificação mínima", () => 
   assert.doesNotMatch(aviso.text, /CPF|referência|documento|renda/i);
 });
 
-test("25: conclusão repetida não reenvia — used_at é checado antes do e-mail", () => {
+test("25: conclusão pública usa claim atômico e o reenvio administrativo permanece independente", () => {
   const registrar = read("supabase/functions/registrar-interesse/index.ts");
-  const concluir = registrar.slice(registrar.indexOf("async function concluirCandidatura"));
-  const usedAt = concluir.indexOf("uploadRow.used_at");
-  const sendSec = concluir.indexOf("sendSecretarioEmail({");
-  const sendProp = concluir.indexOf("sendProponenteEmail({");
-  assert.ok(usedAt >= 0 && sendSec > usedAt && sendProp > usedAt);
+  const reenvio = read("supabase/functions/reenviar-dossie-secretaria/index.ts");
+  assert.match(registrar, /claim_conclusao_candidatura/);
+  assert.match(registrar, /runConclusaoCandidatura/);
+  assert.match(reenvio, /sendSecretarioEmail/);
+  assert.doesNotMatch(reenvio, /sendProponenteEmail/);
+  assert.doesNotMatch(reenvio, /claim_conclusao_candidatura/);
 });
 
 test("dossiê carrega coleções só da candidatura e signed URL não vai para log", () => {

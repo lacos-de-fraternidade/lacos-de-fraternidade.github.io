@@ -2,7 +2,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.8";
 import { hasValidPublishableKey, unauthorizedResponse } from "../_shared/auth.ts";
 import { jsonResponse, optionsResponse } from "../_shared/cors.ts";
 import { randomToken, sha256Hex } from "../_shared/crypto.ts";
-import { loadCandidaturaDossie } from "../_shared/dossie-secretaria.ts";
+import { loadCandidaturaDossie, resolveProponenteEmail } from "../_shared/dossie-secretaria.ts";
 import { sendProponenteEmail, sendSecretarioEmail } from "../_shared/email.ts";
 import { normalizeCandidatura, requiredDocumentTypes } from "../_shared/candidatura.ts";
 
@@ -203,34 +203,21 @@ async function concluirCandidatura(
   }
 
   try {
-    let email = String(irmao?.email || "").trim();
-    if (!email && irmao?.auth_member_id) {
-      const { data: acesso } = await supabase
-        .from("irmaos_autorizados")
-        .select("email")
-        .eq("id", irmao.auth_member_id)
-        .maybeSingle();
-      email = String(acesso?.email || "").trim();
-    }
-    if (!email && irmao?.id) {
-      const { data: acesso } = await supabase
-        .from("irmaos_autorizados")
-        .select("email")
-        .eq("irmao_id", irmao.id)
-        .maybeSingle();
-      email = String(acesso?.email || "").trim();
-    }
-    if (!email) {
+    const resolved = await resolveProponenteEmail(supabase, irmao);
+    if (!resolved.ok) {
+      proponenteNotificacao = "falha";
+    } else if (!resolved.email) {
       proponenteNotificacao = "sem_email";
     } else {
       const sent = await sendProponenteEmail({
-        to: email,
+        to: resolved.email,
         candidatoNome: String(interesse.nome || ""),
         proponenteNome: String(irmao?.nome || ""),
       });
       proponenteNotificacao = sent.sent ? "enviada" : "falha";
     }
-  } catch {
+  } catch (error) {
+    console.error("Falha no e-mail do proponente", { name: error instanceof Error ? error.name : "erro" });
     proponenteNotificacao = "falha";
   }
 

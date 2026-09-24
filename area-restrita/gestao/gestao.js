@@ -883,7 +883,7 @@ function openAccessDialog(row, { step = "status", perfil } = {}) {
     actions.push(ghostButton("Liberar acesso", () => openAccessDialog(row, { step: "confirm", perfil: select.node.value }), "button-primary"));
   }
   if (model.primary === "reenviar_convite") {
-    actions.push(ghostButton("Reenviar convite", (button) => sendGestaoInvite(row, select.node.value, { button, resend: true }), "button-primary"));
+    actions.push(ghostButton("Reenviar convite", (button) => sendGestaoInvite(row, select.node.value, { button, reenviar: true }), "button-primary"));
   }
   if (model.primary === "enviar_novo_convite") {
     actions.push(ghostButton("Enviar novo convite", (button) => sendGestaoInvite(row, select.node.value, { button }), "button-primary"));
@@ -988,10 +988,10 @@ function renderAccessConfirm(row) {
   return box;
 }
 
-function sendGestaoInvite(row, perfil, { reset = false, resend = false, button } = {}) {
+function sendGestaoInvite(row, perfil, { reset = false, reenviar = false, button } = {}) {
   const payload = reset && row.acesso_id
     ? { acao: "reenviar_convite", id: row.acesso_id }
-    : resend && row.acesso_id
+    : reenviar && row.acesso_id
       ? { acao: "reenviar_convite", id: row.acesso_id }
       : {
         acao: "convidar_gestao",

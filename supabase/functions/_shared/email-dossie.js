@@ -6,9 +6,9 @@ export const DOC_SIGNED_URL_TTL_LABEL = "7 dias";
 export const DOCUMENT_LABELS = {
   certidao_nascimento: "Certidão de nascimento",
   certidao_casamento: "Certidão de casamento",
-  identidade: "Identidade",
+  identidade: "Documento de identidade",
   cpf: "CPF",
-  titulo_eleitoral: "Título eleitoral",
+  titulo_eleitoral: "Título de eleitor",
   comprovante_rendimentos: "Comprovante de rendimentos",
   comprovante_residencia: "Comprovante de residência",
 };
@@ -154,10 +154,6 @@ export function buildSecretarioDossie(input) {
     section("Dados do candidato", table([
       row("Protocolo", display(data.id)),
       row("Nome", display(data.nome)),
-      row("CPF", formatCpf(data.cpf)),
-      row("RG", display(data.rg)),
-      row("Órgão expedidor", display(data.rg_orgao)),
-      row("Expedição do RG", formatDate(data.rg_expedicao)),
       row("Nascimento", formatDate(data.data_nascimento)),
       row("Naturalidade", display(data.naturalidade)),
       row("UF de nascimento", display(data.uf_nascimento)),
@@ -185,8 +181,6 @@ export function buildSecretarioDossie(input) {
     familiaRows.push(
       row(familiarPapelLabel(data.familiar_papel), display(data.familiar_nome)),
       row("WhatsApp da esposa ou companheira", formatPhone(data.familiar_whatsapp)),
-      row("Data de casamento", formatDate(data.data_casamento)),
-      row("Nascimento da esposa ou companheira", formatDate(data.esposa_nascimento)),
       row("Ciência do consentimento familiar", yesNo(data.consentimento_familiar)),
     );
   } else if (isMaeConsentimento(estadoCivil)) {
@@ -200,16 +194,9 @@ export function buildSecretarioDossie(input) {
   }
   familiaRows.push(row("Possui filhos", yesNo(data.possui_filhos)));
   if (data.possui_filhos && filhos.length) {
-    filhos.forEach((filho, index) => {
-      const n = filho.ordem || index + 1;
-      familiaRows.push(
-        row(`Filho ${n} — nome`, display(filho.nome)),
-        row(`Filho ${n} — sexo`, sexoLabel(filho.sexo)),
-        row(`Filho ${n} — nascimento`, formatDate(filho.data_nascimento)),
-      );
+    filhos.forEach((filho) => {
+      familiaRows.push(row("Nome", display(filho.nome)));
     });
-  } else if (data.possui_filhos) {
-    familiaRows.push(row("Filhos", "Informados como sim, sem registros adicionais."));
   }
   innerParts.push(section("Informações familiares", table(familiaRows.join(""))));
 
@@ -271,7 +258,7 @@ export function buildSecretarioDossie(input) {
     ? documentos.map((doc) => {
       const label = documentLabel(doc.tipo);
       const link = doc.url
-        ? `<a href="${escapeHtml(doc.url)}" style="color:#123a74;font-weight:700;">Abrir documento</a> <span style="color:#5f6d80;font-weight:400;">(acesso temporário, ${DOC_SIGNED_URL_TTL_LABEL})</span>`
+        ? `<a href="${escapeHtml(doc.url)}" download style="color:#123a74;font-weight:700;">Baixar documento</a> <span style="color:#5f6d80;font-weight:400;">(acesso temporário, ${DOC_SIGNED_URL_TTL_LABEL})</span>`
         : `<span style="color:#5f6d80;">Recebido. Link temporário indisponível — solicite à equipe técnica pelo protocolo.</span>`;
       return `<p style="margin:0 0 10px;color:#132033;"><strong>${escapeHtml(label)}</strong> — recebido<br />${link}</p>`;
     }).join("")
@@ -289,7 +276,6 @@ export function buildSecretarioDossie(input) {
     when ? `Recebido em: ${when}` : "",
     `Protocolo: ${display(data.id)}`,
     `Nome: ${display(data.nome)}`,
-    `CPF: ${formatCpf(data.cpf)}`,
     `WhatsApp: ${formatPhone(data.whatsapp)}`,
     `E-mail: ${display(data.email)}`,
     `Proponente: ${proponenteNome}`,
@@ -374,6 +360,60 @@ export function inspectDossieCompleteness(input) {
     tipos_documentos: documentos.map((doc) => String(doc?.tipo || "")).filter(Boolean).sort(),
     reconstruivel: ausencias === 0 ? "COMPLETA" : dadosOk && docsOk ? "PARCIAL" : "NÃO RECONSTRUÍVEL",
   };
+}
+
+const DOWNLOAD_EXT = ["pdf", "jpg", "jpeg", "png"];
+
+export function documentoDownloadName(tipo, nomeOriginal = "", storagePath = "") {
+  const fromOriginal = String(nomeOriginal || "").toLowerCase().match(/\.([a-z0-9]+)$/);
+  const fromPath = String(storagePath || "").toLowerCase().match(/\.([a-z0-9]+)$/);
+  const ext = (fromOriginal && DOWNLOAD_EXT.includes(fromOriginal[1]) && fromOriginal[1])
+    || (fromPath && DOWNLOAD_EXT.includes(fromPath[1]) && fromPath[1])
+    || "bin";
+  const slug = DOCUMENT_LABELS[tipo] ? String(tipo).replaceAll("_", "-") : "documento";
+  return `${slug}.${ext}`;
+}
+
+export function pickProponenteEmail(input) {
+  const authEmail = String(input?.authEmail || "").trim();
+  const vinculoEmail = String(input?.vinculoEmail || "").trim();
+  const irmaoEmail = String(input?.irmaoEmail || "").trim();
+  if (authEmail) return { email: authEmail, source: "irmaos_autorizados" };
+  if (vinculoEmail) return { email: vinculoEmail, source: "irmaos_autorizados" };
+  if (irmaoEmail) return { email: irmaoEmail, source: "irmaos" };
+  return { email: "", source: "ausente" };
+}
+
+export function finishProponenteResolution(found, laterError) {
+  if (found?.email) return { ok: true, email: found.email, source: found.source };
+  if (laterError) return { ok: false, email: "", source: "erro_consulta" };
+  return { ok: true, email: "", source: "ausente" };
+}
+
+export function resolveProponenteFromLookups({ auth, vinculo, irmaoEmail } = {}) {
+  if (auth?.error) return finishProponenteResolution({ email: "", source: "ausente" }, true);
+  const first = pickProponenteEmail({
+    authEmail: auth?.email || "",
+    vinculoEmail: "",
+    irmaoEmail: "",
+  });
+  if (first.email) return finishProponenteResolution(first, false);
+  if (vinculo?.error) {
+    return finishProponenteResolution(pickProponenteEmail({
+      authEmail: "",
+      vinculoEmail: "",
+      irmaoEmail,
+    }), true);
+  }
+  return finishProponenteResolution(pickProponenteEmail({
+    authEmail: auth?.email || "",
+    vinculoEmail: vinculo?.email || "",
+    irmaoEmail,
+  }), false);
+}
+
+export function isSuccessfulEmailStatus(status) {
+  return Number(status) >= 200 && Number(status) < 300;
 }
 
 export function buildProponenteAviso(input) {

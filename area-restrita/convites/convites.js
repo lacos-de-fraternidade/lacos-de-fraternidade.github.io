@@ -28,26 +28,26 @@ await bootPage("Convites", async (ctx) => {
       const side = el("div");
       side.append(el("span", "status-pill", inviteStatusLabel(state)));
       if (state === "pendente" || state === "enviado" || state === "expirado") {
-        const resend = document.createElement("button");
-        resend.type = "button";
-        resend.className = "button button-secondary table-action";
-        resend.textContent = "Reenviar";
-        resend.addEventListener("click", async () => {
-          if (!beginSubmit(resend, "Enviando...")) return;
+        const reenviar = document.createElement("button");
+        reenviar.type = "button";
+        reenviar.className = "button button-secondary table-action";
+        reenviar.textContent = "Reenviar";
+        reenviar.addEventListener("click", async () => {
+          if (!beginSubmit(reenviar, "Enviando...")) return;
           try {
             const result = await invokeFunction("gerenciar-irmao", { acao: "enviar_convite", id: membro.id, site_origin: location.origin }, ctx.session.access_token);
-            endSubmit(resend);
+            endSubmit(reenviar);
             showToast({
               type: result.data?.ok ? "success" : "error",
               message: result.data?.ok ? "Convite enviado para o e-mail cadastrado." : (result.data?.error || "Não foi possível enviar o convite."),
             });
             if (result.data?.ok) await refresh();
           } catch {
-            endSubmit(resend);
+            endSubmit(reenviar);
             showToast({ type: "error", message: "Não foi possível enviar o convite." });
           }
         });
-        side.append(resend);
+        side.append(reenviar);
       }
       if (state === "enviado") {
         const cancel = document.createElement("button");

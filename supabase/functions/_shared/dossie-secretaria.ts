@@ -1,5 +1,5 @@
 import { requiredDocumentTypes } from "./candidatura.ts";
-import { DOC_SIGNED_URL_TTL_SECONDS, documentoDownloadName, inspectDossieCompleteness, pickProponenteEmail } from "./email-dossie.js";
+import { DOC_SIGNED_URL_TTL_SECONDS, documentoDownloadName, inspectDossieCompleteness, resolveProponenteFromLookups } from "./email-dossie.js";
 
 type QueryClient = {
   from: (table: string) => any;
@@ -78,9 +78,9 @@ export async function resolveProponenteEmail(
   supabase: QueryClient,
   irmao: { id?: string; email?: string | null; auth_member_id?: string | null } | null,
 ) {
-  if (!irmao?.id) return { ok: true as const, email: "", source: "ausente" };
+  if (!irmao?.id) return resolveProponenteFromLookups({});
 
-  let authEmail = "";
+  let auth: { email?: string; error?: boolean } | undefined;
   if (irmao.auth_member_id) {
     const { data, error } = await supabase
       .from("irmaos_autorizados")
@@ -89,9 +89,11 @@ export async function resolveProponenteEmail(
       .maybeSingle();
     if (error) {
       console.error("proponente email consulta", error.code || "erro");
-      return { ok: false as const, email: "", source: "erro_consulta" };
+      return resolveProponenteFromLookups({ auth: { error: true }, irmaoEmail: irmao.email });
     }
-    authEmail = String(data?.email || "");
+    auth = { email: String(data?.email || "") };
+    const first = resolveProponenteFromLookups({ auth, irmaoEmail: "" });
+    if (first.email) return first;
   }
 
   const { data: vinculo, error: vinculoError } = await supabase
@@ -101,15 +103,12 @@ export async function resolveProponenteEmail(
     .maybeSingle();
   if (vinculoError) {
     console.error("proponente email consulta", vinculoError.code || "erro");
-    return { ok: false as const, email: "", source: "erro_consulta" };
+    return resolveProponenteFromLookups({ auth, vinculo: { error: true }, irmaoEmail: irmao.email });
   }
 
-  return {
-    ok: true as const,
-    ...pickProponenteEmail({
-      irmaoEmail: irmao.email,
-      authEmail,
-      vinculoEmail: vinculo?.email,
-    }),
-  };
+  return resolveProponenteFromLookups({
+    auth,
+    vinculo: { email: vinculo?.email },
+    irmaoEmail: irmao.email,
+  });
 }

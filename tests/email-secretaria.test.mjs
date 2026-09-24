@@ -11,6 +11,7 @@ import {
   inspectDossieCompleteness,
   isSuccessfulEmailStatus,
   pickProponenteEmail,
+  resolveProponenteFromLookups,
 } from "../supabase/functions/_shared/email-dossie.js";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -213,6 +214,7 @@ test("18: filhos são apresentados quando existentes", () => {
   const second = com.inner.indexOf("Clara Alfa Silva");
   assert.ok(first >= 0 && second > first);
   assert.match(com.inner, /Possui filhos/);
+  assert.match(com.inner, />Nome</);
   assert.doesNotMatch(com.inner, /Masculino|Feminino|Filho 1|Filho 2|2016-01-01|05\/05\/2018/);
   const sem = buildSecretarioDossie(dossieAlfa({
     interesse: { possui_filhos: false },
@@ -372,12 +374,14 @@ test("inspeção de completude não expõe PII e marca dossiê reconstruível", 
 test("reenvio administrativo só reconstrói e envia à Secretaria", () => {
   const fn = read("supabase/functions/reenviar-dossie-secretaria/index.ts");
   const config = read("supabase/config.toml");
+  const emailer = read("supabase/functions/_shared/email.ts");
   assert.match(config, /\[functions\.reenviar-dossie-secretaria\][\s\S]*verify_jwt = true/);
   assert.match(fn, /requireActiveMember/);
   assert.match(fn, /isStaffProfile/);
   assert.match(fn, /loadCandidaturaDossie/);
   assert.match(fn, /sendSecretarioEmail/);
   assert.match(fn, /acao === "inspecionar"/);
+  assert.match(emailer, /sendTransactionalEmail/);
   assert.doesNotMatch(fn, /sendProponenteEmail/);
   assert.doesNotMatch(fn, /interesse_upload_token/);
   assert.doesNotMatch(fn, /used_at/);
@@ -421,7 +425,7 @@ test("download usa signed URL temporária, CTA de baixar e nome sem PII", () => 
   assert.doesNotMatch(documentoDownloadName("cpf", "cpf-fulano.pdf"), /Alfa|39053344705|Fulano/i);
 });
 
-test("proponente: e-mail do acesso é preferido, ausência e erro ficam explícitos e Resend é validado", () => {
+test("proponente: e-mail do acesso é preferido e consulta posterior não invalida o já encontrado", () => {
   assert.deepEqual(pickProponenteEmail({
     irmaoEmail: "irmao@invalid.test",
     authEmail: "acesso@invalid.test",
@@ -443,19 +447,40 @@ test("proponente: e-mail do acesso é preferido, ausência e erro ficam explíci
     vinculoEmail: "",
   }), { email: "", source: "ausente" });
 
+  assert.deepEqual(resolveProponenteFromLookups({
+    auth: { email: "acesso@invalid.test" },
+    vinculo: { error: true },
+    irmaoEmail: "irmao@invalid.test",
+  }), { ok: true, email: "acesso@invalid.test", source: "irmaos_autorizados" });
+  assert.deepEqual(resolveProponenteFromLookups({
+    auth: { email: "" },
+    vinculo: { error: true },
+    irmaoEmail: "irmao@invalid.test",
+  }), { ok: true, email: "irmao@invalid.test", source: "irmaos" });
+  assert.deepEqual(resolveProponenteFromLookups({
+    auth: { error: true },
+    irmaoEmail: "irmao@invalid.test",
+  }), { ok: false, email: "", source: "erro_consulta" });
+  assert.deepEqual(resolveProponenteFromLookups({
+    auth: { email: "" },
+    vinculo: { email: "" },
+    irmaoEmail: "",
+  }), { ok: true, email: "", source: "ausente" });
+
   const registrar = read("supabase/functions/registrar-interesse/index.ts");
   const loader = read("supabase/functions/_shared/dossie-secretaria.ts");
   const emailer = read("supabase/functions/_shared/email.ts");
   assert.match(registrar, /resolveProponenteEmail/);
   assert.match(registrar, /sendProponenteEmail/);
-  assert.match(loader, /erro_consulta/);
-  assert.match(loader, /pickProponenteEmail/);
-  assert.match(emailer, /isSuccessfulEmailStatus/);
-  assert.match(emailer, /RESEND_FROM/);
-  assert.equal(isSuccessfulEmailStatus(200, "re_123"), true);
-  assert.equal(isSuccessfulEmailStatus(403, null), false);
-  assert.equal(isSuccessfulEmailStatus(200, null), false);
-  assert.equal(isSuccessfulEmailStatus(500, "re_123"), false);
+  assert.match(loader, /resolveProponenteFromLookups/);
+  assert.match(loader, /if \(first\.email\) return first/);
+  assert.match(emailer, /sendTransactionalEmail/);
+  assert.match(emailer, /STARTTLS/);
+  assert.match(emailer, /AUTH LOGIN/);
+  assert.match(emailer, /denoSmtpTransport/);
+  assert.equal(isSuccessfulEmailStatus(250), true);
+  assert.equal(isSuccessfulEmailStatus(550), false);
+  assert.equal(isSuccessfulEmailStatus(0), false);
 
   const aviso = buildProponenteAviso({
     candidatoNome: "Candidato Alfa Silva",

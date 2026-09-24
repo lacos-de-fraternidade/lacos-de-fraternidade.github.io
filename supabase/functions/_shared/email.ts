@@ -1,11 +1,24 @@
-import { buildProponenteAviso, buildSecretarioDossie, isSuccessfulEmailStatus } from "./email-dossie.js";
+import { buildProponenteAviso, buildSecretarioDossie } from "./email-dossie.js";
+import {
+  buildSmtpMime,
+  classifySmtpReply,
+  encodeSmtpData,
+  parseSmtpCode,
+  sendTransactionalEmail,
+} from "./smtp-mail.js";
 
 const NOTIFY_EMAIL = "lacos.de.fraternidade.357.251@gmail.com";
-const RESEND_FROM_FALLBACK = `Loja Lacos de Fraternidade <onboarding@${["resend", "dev"].join(".")}>`;
 const LOGO_URL = "https://lacos-de-fraternidade.github.io/assets/logo-classica.jpg";
+const SMTP_TIMEOUT_MS = 15_000;
 
-function resendFrom() {
-  return String(Deno.env.get("RESEND_FROM") || "").trim() || RESEND_FROM_FALLBACK;
+function smtpEnv() {
+  return {
+    SMTP_HOST: Deno.env.get("SMTP_HOST") || "",
+    SMTP_PORT: Deno.env.get("SMTP_PORT") || "",
+    SMTP_USER: Deno.env.get("SMTP_USER") || "",
+    SMTP_PASS: Deno.env.get("SMTP_PASS") || "",
+    SMTP_SENDER_NAME: Deno.env.get("SMTP_SENDER_NAME") || "",
+  };
 }
 
 function escapeHtml(value: string) {
@@ -55,6 +68,150 @@ function layout(title: string, inner: string) {
 </html>`;
 }
 
+function timeoutError() {
+  const error = new Error("timeout");
+  error.name = "TimeoutError";
+  return error;
+}
+
+async function withTimeout<T>(promise: Promise<T>, onTimeout?: () => void): Promise<T> {
+  let timer: number | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<T>((_, reject) => {
+        timer = setTimeout(() => {
+          onTimeout?.();
+          reject(timeoutError());
+        }, SMTP_TIMEOUT_MS);
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
+class SmtpSocket {
+  leftover = new Uint8Array(0);
+  decoder = new TextDecoder();
+  encoder = new TextEncoder();
+
+  constructor(public conn: Deno.Conn) {}
+
+  async writeLine(line: string) {
+    await this.conn.write(this.encoder.encode(`${line}\r\n`));
+  }
+
+  async writeRaw(payload: string) {
+    await this.conn.write(this.encoder.encode(payload));
+  }
+
+  async readLine() {
+    while (true) {
+      for (let i = 0; i < this.leftover.length - 1; i += 1) {
+        if (this.leftover[i] === 13 && this.leftover[i + 1] === 10) {
+          const line = this.decoder.decode(this.leftover.subarray(0, i));
+          this.leftover = this.leftover.subarray(i + 2);
+          return line;
+        }
+      }
+      const buf = new Uint8Array(4096);
+      const n = await this.conn.read(buf);
+      if (n === null) {
+        const error = new Error("connection");
+        error.name = "ConnectionError";
+        throw error;
+      }
+      const next = new Uint8Array(this.leftover.length + n);
+      next.set(this.leftover);
+      next.set(buf.subarray(0, n), this.leftover.length);
+      this.leftover = next;
+    }
+  }
+
+  async readReply() {
+    const texts: string[] = [];
+    while (true) {
+      const parsed = parseSmtpCode(await this.readLine());
+      if (!parsed) {
+        const error = new Error("smtp reply");
+        throw error;
+      }
+      texts.push(parsed.text);
+      if (!parsed.more) return { code: parsed.code, text: texts.join("\n") };
+    }
+  }
+
+  async command(line: string) {
+    await this.writeLine(line);
+    return this.readReply();
+  }
+}
+
+export async function denoSmtpTransport(
+  config: { host: string; port: number; user: string; pass: string; senderName: string },
+  options: { to: string; subject: string; text: string; html: string; replyTo?: string },
+) {
+  let conn: Deno.Conn | null = null;
+  const close = () => {
+    try { conn?.close(); } catch { /* ignore */ }
+  };
+  return withTimeout((async () => {
+    try {
+      try {
+        conn = await Deno.connect({ hostname: config.host, port: config.port });
+      } catch {
+        const error = new Error("connection");
+        error.name = "ConnectionError";
+        throw error;
+      }
+      let sock = new SmtpSocket(conn);
+      const greet = await sock.readReply();
+      if (greet.code !== 220) return { status: greet.code, name: "conexao" };
+
+      const ehlo = await sock.command("EHLO lacos");
+      if (ehlo.code !== 250) return { status: ehlo.code, name: "conexao" };
+
+      const startTls = await sock.command("STARTTLS");
+      if (startTls.code !== 220) return { status: startTls.code, name: "starttls" };
+
+      try {
+        conn = await Deno.startTls(conn, { hostname: config.host });
+      } catch {
+        const error = new Error("starttls");
+        error.name = "TlsError";
+        throw error;
+      }
+      sock = new SmtpSocket(conn);
+
+      const secured = await sock.command("EHLO lacos");
+      if (secured.code !== 250) return { status: secured.code, name: "starttls" };
+
+      const authReady = await sock.command("AUTH LOGIN");
+      if (authReady.code !== 334) return { status: authReady.code, name: "autenticacao" };
+      const userReply = await sock.command(btoa(config.user));
+      if (userReply.code !== 334) return { status: userReply.code, name: "autenticacao" };
+      const passReply = await sock.command(btoa(config.pass));
+      if (passReply.code !== 235) return { status: passReply.code, name: "autenticacao" };
+
+      const mail = await sock.command(`MAIL FROM:<${config.user}>`);
+      if (mail.code !== 250) return { status: mail.code, name: classifySmtpReply(mail.code).name };
+
+      const rcpt = await sock.command(`RCPT TO:<${options.to}>`);
+      if (rcpt.code !== 250 && rcpt.code !== 251) return { status: rcpt.code, name: "destinatario" };
+
+      const data = await sock.command("DATA");
+      if (data.code !== 354) return { status: data.code, name: "mensagem" };
+      await sock.writeRaw(`${encodeSmtpData(buildSmtpMime(config, options))}\r\n.\r\n`);
+      const done = await sock.readReply();
+      await sock.command("QUIT").catch(() => {});
+      return { status: done.code, name: classifySmtpReply(done.code).name };
+    } finally {
+      close();
+    }
+  })(), close);
+}
+
 async function sendEmail(options: {
   to: string;
   subject: string;
@@ -62,45 +219,11 @@ async function sendEmail(options: {
   html: string;
   replyTo?: string;
 }): Promise<{ sent: boolean; status: number; id: string | null }> {
-  const apiKey = Deno.env.get("RESEND_API_KEY");
-  if (!apiKey) {
-    console.error("Falha no envio de e-mail", { status: 0, name: "RESEND_API_KEY ausente" });
-    return { sent: false, status: 0, id: null };
+  const result = await sendTransactionalEmail(options, smtpEnv(), denoSmtpTransport);
+  if (!result.sent) {
+    console.error("Falha no envio de e-mail", { status: result.status, name: result.name });
   }
-
-  const response = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      from: resendFrom(),
-      to: [options.to],
-      reply_to: options.replyTo,
-      subject: options.subject,
-      text: options.text,
-      html: options.html,
-    }),
-  });
-
-  const raw = await response.text();
-  let parsed: { id?: string; message?: string; name?: string } = {};
-  try {
-    parsed = JSON.parse(raw);
-  } catch {
-    parsed = {};
-  }
-
-  if (!isSuccessfulEmailStatus(response.status, parsed.id)) {
-    console.error("Falha no envio de e-mail", {
-      status: response.status,
-      name: parsed.name || "erro",
-    });
-    return { sent: false, status: response.status, id: parsed.id || null };
-  }
-
-  return { sent: true, status: response.status, id: parsed.id || null };
+  return { sent: result.sent, status: result.status, id: result.id };
 }
 
 export async function sendSecretarioEmail(dossie: {

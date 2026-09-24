@@ -8,6 +8,8 @@ O brasão é a URL pública:
 
 Credenciais SMTP **não** entram no repositório.
 
+O Auth continua responsável só por convite e recuperação. Os e-mails transacionais do Cadastro do Candidato (dossiê, proponente, reenvio) usam o mesmo Gmail SMTP institucional pelas Edge Functions. Ver `docs/cadastro-candidato.md`. Não aplicar `config pull`/`config push` para copiar o SMTP do Auth.
+
 ## Onde editar no Dashboard
 
 [Authentication → Email Templates](https://supabase.com/dashboard/project/klxcwkclydirdxomkbtv/auth/templates)

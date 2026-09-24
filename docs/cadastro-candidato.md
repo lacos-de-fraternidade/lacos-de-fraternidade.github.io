@@ -43,9 +43,44 @@ O e-mail final da Secretaria é o dossiê operacional da candidatura. Coleções
 
 Não entram no e-mail — embora continuem sendo coletados e persistidos — CPF, RG, órgão expedidor, expedição do RG, data de casamento, nascimento da esposa/companheira, sexo e nascimento dos filhos, tipo sanguíneo, plano de saúde, tratamento de saúde, renda mensal, renda familiar, dados militares, processo criminal, filiação partidária e entidades.
 
-O e-mail do proponente permanece só a notificação mínima de indicação. Não leva o dossiê. O endereço é resolvido primeiro em `irmaos_autorizados` (e-mail do acesso Myosotis) e só depois em `irmaos.email`. A resposta do Resend precisa ser HTTP 2xx com ID da mensagem; caso contrário a conclusão grava `notificacao_proponente = falha`. Envios a terceiros exigem `RESEND_FROM` com domínio verificado — o remetente de teste `onboarding@resend.dev` só entrega na caixa da conta.
+O e-mail do proponente permanece só a notificação mínima de indicação. Não leva o dossiê. O endereço é resolvido primeiro em `irmaos_autorizados` (e-mail do acesso Myosotis) e só depois em `irmaos.email`. Se uma estratégia já encontrou um endereço válido, a consulta seguinte não é executada e não pode invalidá-lo. O envio só é sucesso quando o SMTP institucional aceita a mensagem; caso contrário a conclusão grava `notificacao_proponente = falha`. Erro de consulta não vira `sem_email`.
 
-Uma candidatura já concluída pode gerar de novo o dossiê atual pela Edge Function administrativa `reenviar-dossie-secretaria` (`verify_jwt = true`, staff ativo). A operação só lê os dados persistidos, emite novas signed URLs e reenvia à Secretaria. Não reabre a candidatura, não altera `used_at`/`status`, não duplica coleções e não notifica o proponente.
+Uma candidatura já concluída pode gerar de novo o dossiê atual pela Edge Function administrativa `reenviar-dossie-secretaria` (`verify_jwt = true`, staff ativo). A operação só lê os dados persistidos, emite novas signed URLs e reenvia à Secretaria pelo mesmo helper SMTP. Não reabre a candidatura, não altera `used_at`/`status`, não duplica coleções e não notifica o proponente.
+
+## Infraestrutura de e-mail
+
+Há um único provedor: Gmail SMTP institucional (`smtp.gmail.com:587`, STARTTLS). Duas integrações conforme a finalidade:
+
+| Finalidade | Integração | Transporte |
+| --- | --- | --- |
+| Convite e recuperação da Área dos Irmãos | Supabase Auth | `inviteUserByEmail` / recovery do Auth |
+| Dossiê da Secretaria, aviso do proponente e reenvio administrativo | Edge Functions | helper SMTP compartilhado (`smtp-mail.js` + `email.ts`) |
+
+Não alterar o fluxo de convites. `sendMemberInvite()` continua usando `supabase.auth.admin.inviteUserByEmail(...)`.
+
+Secrets das Edge Functions (nunca no Git, `config.toml`, migration, fixture ou log):
+
+| Secret | Obrigatório | Default seguro |
+| --- | --- | --- |
+| `SMTP_HOST` | Não | `smtp.gmail.com` |
+| `SMTP_PORT` | Não | `587` |
+| `SMTP_USER` | Não | Gmail institucional da Loja |
+| `SMTP_PASS` | **Sim** | nenhum |
+| `SMTP_SENDER_NAME` | Não | `ARLS Laços de Fraternidade` |
+
+Sem `SMTP_PASS` o envio falha de forma explícita. Senha real não é documentada.
+
+Configuração posterior (não executar nesta entrega):
+
+```text
+supabase secrets set SMTP_HOST=smtp.gmail.com
+supabase secrets set SMTP_PORT=587
+supabase secrets set SMTP_USER=<gmail institucional>
+supabase secrets set SMTP_PASS=<senha de aplicativo>
+supabase secrets set SMTP_SENDER_NAME="ARLS Laços de Fraternidade"
+```
+
+Não usar `supabase config pull` / `config push` só para copiar SMTP do Auth.
 
 ## Limite de upload
 

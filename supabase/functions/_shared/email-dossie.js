@@ -384,8 +384,36 @@ export function pickProponenteEmail(input) {
   return { email: "", source: "ausente" };
 }
 
-export function isSuccessfulEmailStatus(status, id) {
-  return Number(status) >= 200 && Number(status) < 300 && Boolean(id);
+export function finishProponenteResolution(found, laterError) {
+  if (found?.email) return { ok: true, email: found.email, source: found.source };
+  if (laterError) return { ok: false, email: "", source: "erro_consulta" };
+  return { ok: true, email: "", source: "ausente" };
+}
+
+export function resolveProponenteFromLookups({ auth, vinculo, irmaoEmail } = {}) {
+  if (auth?.error) return finishProponenteResolution({ email: "", source: "ausente" }, true);
+  const first = pickProponenteEmail({
+    authEmail: auth?.email || "",
+    vinculoEmail: "",
+    irmaoEmail: "",
+  });
+  if (first.email) return finishProponenteResolution(first, false);
+  if (vinculo?.error) {
+    return finishProponenteResolution(pickProponenteEmail({
+      authEmail: "",
+      vinculoEmail: "",
+      irmaoEmail,
+    }), true);
+  }
+  return finishProponenteResolution(pickProponenteEmail({
+    authEmail: auth?.email || "",
+    vinculoEmail: vinculo?.email || "",
+    irmaoEmail,
+  }), false);
+}
+
+export function isSuccessfulEmailStatus(status) {
+  return Number(status) >= 200 && Number(status) < 300;
 }
 
 export function buildProponenteAviso(input) {

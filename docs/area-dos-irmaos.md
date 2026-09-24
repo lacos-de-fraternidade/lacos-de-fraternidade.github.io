@@ -19,6 +19,7 @@ Além das chaves padrão do projeto:
 | `AUTH_HASH_PEPPER` | **Sim, antes do uso em produção** | HMAC-SHA-256 de CIM e IP nos logs e no rate limit. Mínimo 16 caracteres. Sem ele o login responde de forma genérica e não autentica. |
 | `BOOTSTRAP_INVITE_SECRET` | Só na ativação inicial | Convite do primeiro administrador. Mínimo 16 caracteres. **Remover ou rotacionar depois da primeira conta ativada.** |
 | `PUBLIC_SITE_URL` | Recomendado | Padrão `https://lacos-de-fraternidade.github.io` |
+| `SMTP_HOST` `SMTP_PORT` `SMTP_USER` `SMTP_PASS` `SMTP_SENDER_NAME` | Cadastro do Candidato | Gmail SMTP das Edge Functions (dossiê, proponente, reenvio). Convites e recuperação continuam no SMTP do Auth. Ver `docs/cadastro-candidato.md`. |
 
 Nunca colocar `service_role` no frontend.
 

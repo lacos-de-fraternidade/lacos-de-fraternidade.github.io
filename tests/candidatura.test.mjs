@@ -141,7 +141,7 @@ test("backend revalida proponente e não cria cadastro paralelo", () => {
   assert.match(registrar, /acao.*concluir/);
   assert.match(shared, /proponente_id: proponenteId/);
   assert.doesNotMatch(shared, /irmao_convite_id/);
-  assert.doesNotMatch(avisoProponente, /formatCpf|renda_mensal|Referência pessoal|Abrir documento/);
+  assert.doesNotMatch(avisoProponente, /formatCpf|renda_mensal|Referência pessoal|Abrir documento|Baixar documento/);
   assert.match(avisoProponente, /identificou você como o Irmão que o convidou/);
 });
 

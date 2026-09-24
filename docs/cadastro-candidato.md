@@ -33,17 +33,17 @@ Esta entrega **não** aplica nada no projeto Supabase de produção. Depois da a
 ## Documentos
 
 - Path: `<interesse_uuid>/<documento_uuid>.<ext>`
-- Sem URL pública permanente. O e-mail da Secretaria recebe signed URLs temporárias (`createSignedUrls`, TTL de 7 dias) só dos arquivos daquela candidatura (`<interesse_id>/...`).
-- O bucket `candidaturas-documentos` permanece privado. Signed URLs não são gravadas em log.
+- Sem URL pública permanente. O e-mail da Secretaria recebe signed URLs temporárias (`createSignedUrl` com `download` e nome operacional do tipo + extensão, TTL de 7 dias) só dos arquivos daquela candidatura (`<interesse_id>/...`).
+- O bucket `candidaturas-documentos` permanece privado. Signed URLs não são gravadas em log. O CTA do dossiê é **Baixar documento**.
 - Token da cartilha **não** autoriza documento de candidatura.
 
 ## E-mail da Secretaria
 
-O e-mail final da Secretaria é o dossiê operacional da candidatura. Coleções são lidas com `interesse_id` daquela conclusão. O dossiê inclui identificação, documentos de identidade, filiação, contatos, endereço residencial, família aplicável, filhos, escolaridade, dados profissionais operacionais, proponente (somente o nome), referências pessoais, referência comercial quando houver, motivação, protocolo/status e documentos com signed URL.
+O e-mail final da Secretaria é o dossiê operacional da candidatura. Coleções são lidas com `interesse_id` daquela conclusão. O dossiê inclui identificação (sem CPF/RG), filiação, contatos, endereço residencial, família aplicável (sem datas de casamento/nascimento da esposa), nomes dos filhos, escolaridade, dados profissionais operacionais, proponente (somente o nome), referências pessoais, referência comercial quando houver, motivação, protocolo/status e documentos com signed URL de download.
 
-Não entram no e-mail — embora continuem sendo coletados e persistidos — tipo sanguíneo, plano de saúde, tratamento de saúde, renda mensal, renda familiar, dados militares, processo criminal, filiação partidária e entidades.
+Não entram no e-mail — embora continuem sendo coletados e persistidos — CPF, RG, órgão expedidor, expedição do RG, data de casamento, nascimento da esposa/companheira, sexo e nascimento dos filhos, tipo sanguíneo, plano de saúde, tratamento de saúde, renda mensal, renda familiar, dados militares, processo criminal, filiação partidária e entidades.
 
-O e-mail do proponente permanece só a notificação mínima de indicação. Não leva o dossiê.
+O e-mail do proponente permanece só a notificação mínima de indicação. Não leva o dossiê. O endereço é resolvido primeiro em `irmaos_autorizados` (e-mail do acesso Myosotis) e só depois em `irmaos.email`. A resposta do Resend precisa ser HTTP 2xx com ID da mensagem; caso contrário a conclusão grava `notificacao_proponente = falha`. Envios a terceiros exigem `RESEND_FROM` com domínio verificado — o remetente de teste `onboarding@resend.dev` só entrega na caixa da conta.
 
 Uma candidatura já concluída pode gerar de novo o dossiê atual pela Edge Function administrativa `reenviar-dossie-secretaria` (`verify_jwt = true`, staff ativo). A operação só lê os dados persistidos, emite novas signed URLs e reenvia à Secretaria. Não reabre a candidatura, não altera `used_at`/`status`, não duplica coleções e não notifica o proponente.
 

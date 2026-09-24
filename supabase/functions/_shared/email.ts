@@ -1,8 +1,12 @@
-import { buildProponenteAviso, buildSecretarioDossie } from "./email-dossie.js";
+import { buildProponenteAviso, buildSecretarioDossie, isSuccessfulEmailStatus } from "./email-dossie.js";
 
 const NOTIFY_EMAIL = "lacos.de.fraternidade.357.251@gmail.com";
-const RESEND_FROM = `Loja Lacos de Fraternidade <onboarding@${["resend", "dev"].join(".")}>`;
+const RESEND_FROM_FALLBACK = `Loja Lacos de Fraternidade <onboarding@${["resend", "dev"].join(".")}>`;
 const LOGO_URL = "https://lacos-de-fraternidade.github.io/assets/logo-classica.jpg";
+
+function resendFrom() {
+  return String(Deno.env.get("RESEND_FROM") || "").trim() || RESEND_FROM_FALLBACK;
+}
 
 function escapeHtml(value: string) {
   return value
@@ -71,7 +75,7 @@ async function sendEmail(options: {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      from: RESEND_FROM,
+      from: resendFrom(),
       to: [options.to],
       reply_to: options.replyTo,
       subject: options.subject,
@@ -88,12 +92,12 @@ async function sendEmail(options: {
     parsed = {};
   }
 
-  if (!response.ok) {
+  if (!isSuccessfulEmailStatus(response.status, parsed.id)) {
     console.error("Falha no envio de e-mail", {
       status: response.status,
       name: parsed.name || "erro",
     });
-    return { sent: false, status: response.status, id: null };
+    return { sent: false, status: response.status, id: parsed.id || null };
   }
 
   return { sent: true, status: response.status, id: parsed.id || null };

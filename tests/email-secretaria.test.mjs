@@ -7,7 +7,10 @@ import {
   DOC_SIGNED_URL_TTL_SECONDS,
   buildProponenteAviso,
   buildSecretarioDossie,
+  documentoDownloadName,
   inspectDossieCompleteness,
+  isSuccessfulEmailStatus,
+  pickProponenteEmail,
 } from "../supabase/functions/_shared/email-dossie.js";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -139,7 +142,8 @@ test("TTL das signed URLs da Secretaria é de 7 dias", () => {
   assert.equal(DOC_SIGNED_URL_TTL_SECONDS, 7 * 24 * 60 * 60);
   const loader = read("supabase/functions/_shared/dossie-secretaria.ts");
   assert.match(loader, /DOC_SIGNED_URL_TTL_SECONDS/);
-  assert.match(loader, /createSignedUrls/);
+  assert.match(loader, /createSignedUrl\(/);
+  assert.match(loader, /download: filename/);
   assert.match(read("supabase/functions/registrar-interesse/index.ts"), /loadCandidaturaDossie/);
 });
 
@@ -179,7 +183,9 @@ test("17: condicionais familiares são respeitadas", () => {
   const casado = buildSecretarioDossie(dossieAlfa());
   assert.match(casado.inner, /Esposa/);
   assert.match(casado.inner, /Ana Alfa Souza/);
-  assert.match(casado.inner, /Data de casamento/);
+  assert.match(casado.inner, /Ciência do consentimento familiar/);
+  assert.doesNotMatch(casado.inner, /Data de casamento/);
+  assert.doesNotMatch(casado.inner, /Nascimento da esposa/);
   assert.doesNotMatch(casado.inner, /Situação familiar/);
 
   const solteiro = buildSecretarioDossie(dossieAlfa({
@@ -197,15 +203,24 @@ test("17: condicionais familiares são respeitadas", () => {
 });
 
 test("18: filhos são apresentados quando existentes", () => {
-  const com = buildSecretarioDossie(dossieAlfa());
-  assert.match(com.inner, /Pedro Alfa Silva/);
-  assert.match(com.inner, /Masculino/);
+  const com = buildSecretarioDossie(dossieAlfa({
+    filhos: [
+      { nome: "Pedro Alfa Silva", sexo: "masculino", data_nascimento: "2016-01-01", ordem: 1 },
+      { nome: "Clara Alfa Silva", sexo: "feminino", data_nascimento: "2018-05-05", ordem: 2 },
+    ],
+  }));
+  const first = com.inner.indexOf("Pedro Alfa Silva");
+  const second = com.inner.indexOf("Clara Alfa Silva");
+  assert.ok(first >= 0 && second > first);
+  assert.match(com.inner, /Possui filhos/);
+  assert.doesNotMatch(com.inner, /Masculino|Feminino|Filho 1|Filho 2|2016-01-01|05\/05\/2018/);
   const sem = buildSecretarioDossie(dossieAlfa({
     interesse: { possui_filhos: false },
     filhos: [],
   }));
   assert.match(sem.inner, /Possui filhos/);
-  assert.doesNotMatch(sem.inner, /Pedro Alfa Silva/);
+  assert.match(sem.inner, />Não</);
+  assert.doesNotMatch(sem.inner, /Pedro Alfa Silva|Clara Alfa Silva/);
 });
 
 test("19: campos opcionais ausentes não quebram o e-mail", () => {
@@ -320,15 +335,15 @@ test("dossiê da Secretaria omite saúde, renda, militar, criminal, partido e en
     assert.doesNotMatch(rendered, new RegExp(item.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
   }
   assert.match(inner, /Candidato Alfa Silva/);
-  assert.match(inner, /390\.533\.447-05/);
-  assert.match(inner, /IFP-RJ/);
+  assert.doesNotMatch(rendered, /390\.533\.447-05|IFP-RJ|Órgão expedidor|Expedição do RG/);
   assert.match(inner, /Tempo de residência/);
   assert.match(inner, /Empresa Alfa/);
   assert.match(inner, /Data de admissão/);
   assert.match(inner, /Irmão Proponente Alfa/);
   assert.match(inner, /Referencia Alfa Um/);
   assert.match(inner, /Banco Alfa SA/);
-  assert.match(inner, /Abrir documento/);
+  assert.match(inner, /Baixar documento/);
+  assert.doesNotMatch(inner, /Abrir documento/);
   assert.match(read("supabase/functions/_shared/candidatura.ts"), /plano_saude/);
   assert.match(read("supabase/functions/_shared/candidatura.ts"), /renda_mensal/);
   assert.match(read("supabase/functions/_shared/candidatura.ts"), /foi_militar/);
@@ -369,4 +384,84 @@ test("reenvio administrativo só reconstrói e envia à Secretaria", () => {
   assert.doesNotMatch(fn, /\.update\(/);
   assert.doesNotMatch(fn, /\.insert\(/);
   assert.doesNotMatch(fn, /status:\s*"Recebida"/);
+});
+
+test("dossiê omite CPF, RG, órgão, expedição, datas da esposa e dados dos filhos além do nome", () => {
+  const { inner, text } = buildSecretarioDossie(dossieAlfa({
+    filhos: [
+      { nome: "Pedro Alfa Silva", sexo: "masculino", data_nascimento: "2016-01-01", ordem: 1 },
+      { nome: "Clara Alfa Silva", sexo: "feminino", data_nascimento: "2018-05-05", ordem: 2 },
+    ],
+  }));
+  const rendered = `${inner}\n${text}`;
+  assert.doesNotMatch(rendered, /390\.533\.447-05|39053344705/);
+  assert.doesNotMatch(rendered, />RG<|>Órgão expedidor<|>Expedição do RG|IFP-RJ|10\/10\/2010/);
+  assert.doesNotMatch(rendered, /Data de casamento|01\/06\/2015|Nascimento da esposa|04\/03\/1991/);
+  assert.doesNotMatch(rendered, /Filho 1|Filho 2|Masculino|Feminino|01\/01\/2016|05\/05\/2018/);
+  assert.match(inner, /Pedro Alfa Silva/);
+  assert.match(inner, /Clara Alfa Silva/);
+  assert.match(inner, /Ana Alfa Souza/);
+  assert.match(inner, /\(21\) 98888-0001/);
+  assert.match(inner, /Ciência do consentimento familiar/);
+});
+
+test("download usa signed URL temporária, CTA de baixar e nome sem PII", () => {
+  const loader = read("supabase/functions/_shared/dossie-secretaria.ts");
+  assert.match(loader, /createSignedUrl\(/);
+  assert.match(loader, /download: filename/);
+  assert.match(loader, /startsWith\(prefixo\)/);
+  assert.doesNotMatch(loader, /createSignedUrls/);
+  assert.doesNotMatch(loader, /console\.(log|error|info)\([^)]*signedUrl/);
+  assert.match(read("supabase/migrations/20260916180000_cadastro_candidato_admissao.sql"), /public = excluded.public/);
+  const { inner } = buildSecretarioDossie(dossieAlfa());
+  assert.match(inner, /Baixar documento/);
+  assert.doesNotMatch(inner, /Abrir documento/);
+  assert.equal(documentoDownloadName("identidade", "RG Candidato Alfa Silva 39053344705.pdf", "id/doc.pdf"), "identidade.pdf");
+  assert.equal(documentoDownloadName("certidao_casamento", "casamento.PNG", "id/x.png"), "certidao-casamento.png");
+  assert.doesNotMatch(documentoDownloadName("cpf", "cpf-fulano.pdf"), /Alfa|39053344705|Fulano/i);
+});
+
+test("proponente: e-mail do acesso é preferido, ausência e erro ficam explícitos e Resend é validado", () => {
+  assert.deepEqual(pickProponenteEmail({
+    irmaoEmail: "irmao@invalid.test",
+    authEmail: "acesso@invalid.test",
+    vinculoEmail: "",
+  }), { email: "acesso@invalid.test", source: "irmaos_autorizados" });
+  assert.deepEqual(pickProponenteEmail({
+    irmaoEmail: "",
+    authEmail: "",
+    vinculoEmail: "vinculo@invalid.test",
+  }), { email: "vinculo@invalid.test", source: "irmaos_autorizados" });
+  assert.deepEqual(pickProponenteEmail({
+    irmaoEmail: "irmao@invalid.test",
+    authEmail: "",
+    vinculoEmail: "",
+  }), { email: "irmao@invalid.test", source: "irmaos" });
+  assert.deepEqual(pickProponenteEmail({
+    irmaoEmail: "",
+    authEmail: "",
+    vinculoEmail: "",
+  }), { email: "", source: "ausente" });
+
+  const registrar = read("supabase/functions/registrar-interesse/index.ts");
+  const loader = read("supabase/functions/_shared/dossie-secretaria.ts");
+  const emailer = read("supabase/functions/_shared/email.ts");
+  assert.match(registrar, /resolveProponenteEmail/);
+  assert.match(registrar, /sendProponenteEmail/);
+  assert.match(loader, /erro_consulta/);
+  assert.match(loader, /pickProponenteEmail/);
+  assert.match(emailer, /isSuccessfulEmailStatus/);
+  assert.match(emailer, /RESEND_FROM/);
+  assert.equal(isSuccessfulEmailStatus(200, "re_123"), true);
+  assert.equal(isSuccessfulEmailStatus(403, null), false);
+  assert.equal(isSuccessfulEmailStatus(200, null), false);
+  assert.equal(isSuccessfulEmailStatus(500, "re_123"), false);
+
+  const aviso = buildProponenteAviso({
+    candidatoNome: "Candidato Alfa Silva",
+    proponenteNome: "Irmão Proponente Alfa",
+  });
+  assert.match(aviso.inner, /identificou você como o Irmão que o convidou/);
+  assert.doesNotMatch(aviso.inner, /39053344705|Referencia Alfa|Rua Alfa|Banco Alfa|Documento|filhos/i);
+  assert.doesNotMatch(read("supabase/functions/reenviar-dossie-secretaria/index.ts"), /sendProponenteEmail/);
 });

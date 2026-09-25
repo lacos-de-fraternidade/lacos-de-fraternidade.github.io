@@ -105,7 +105,7 @@ async function load(ctx) {
     ctx.supabase.from("irmaos").select("id, nome, dia_nascimento, mes_nascimento, data_iniciacao, exibir_aniversario, exibir_iniciacao").eq("ativo", true),
     ctx.supabase.from("familiares").select("nome, parentesco, dia_nascimento, mes_nascimento, autorizado_exibicao").eq("ativo", true),
     ctx.supabase.from("casamentos").select("irmao_id, data_casamento, autorizado_exibicao").eq("ativo", true),
-    ctx.supabase.from("eventos_internos").select("titulo, descricao, data_evento, inicia_em, tipo_evento, publicado, ativo, presenca_obrigatoria").eq("publicado", true).eq("ativo", true),
+    ctx.supabase.from("eventos_internos").select("titulo, descricao, data_evento, inicia_em, tipo_evento, publicado, ativo, presenca_obrigatoria, grau, cafe_fraternal, cafe_horario, sessoes_pauta_itens(id, titulo, ordem)").eq("publicado", true).eq("ativo", true),
     ctx.supabase.from("datas_institucionais").select("chave, titulo, descricao, dia, mes, tipo, recorrencia, dia_inteiro, ativo").eq("ativo", true),
   ]);
   if (irmaosRes.error || familiaresRes.error || casamentosRes.error || eventosRes.error) {
@@ -178,6 +178,10 @@ async function load(ctx) {
         year: when.getFullYear(),
         when,
         presencaObrigatoria: row.presenca_obrigatoria === true,
+        grau: row.grau,
+        cafe_fraternal: row.cafe_fraternal === true,
+        cafe_horario: row.cafe_horario,
+        pauta: row.sessoes_pauta_itens || [],
         loja: LODGE_NAME,
       });
       continue;

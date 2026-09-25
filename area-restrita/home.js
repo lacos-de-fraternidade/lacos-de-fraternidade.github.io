@@ -19,7 +19,9 @@ import {
   LODGE_NAME,
   nextLodgeSession,
   relativeDaysLabel,
+  sessionProgramItems,
   sessionTitle,
+  sessionTypeLabel,
 } from "./js/sessoes.js";
 import { pickDashboardNotice, relatedSessionNotices, relatedEventForNotice, noticePublicDateLabel, sessionNoticeCopy, NOTICE_TYPE_LABELS, truncateText } from "./js/comunicados.js";
 
@@ -47,7 +49,7 @@ async function loadDashboard(ctx) {
   const irmaoId = ctx.profile.irmao_id || null;
   const queries = [
     ctx.supabase.from("irmaos").select("id, nome, dia_nascimento, mes_nascimento, exibir_aniversario, data_iniciacao, loja_iniciacao, exibir_iniciacao").eq("ativo", true),
-    ctx.supabase.from("eventos_internos").select("id, titulo, descricao, inicia_em, tipo_evento, data_evento, publicado, ativo, destaque, presenca_obrigatoria").eq("publicado", true).eq("ativo", true),
+    ctx.supabase.from("eventos_internos").select("id, titulo, descricao, inicia_em, tipo_evento, data_evento, publicado, ativo, destaque, presenca_obrigatoria, grau, cafe_fraternal, cafe_horario, sessoes_pauta_itens(id, titulo, ordem)").eq("publicado", true).eq("ativo", true),
     ctx.supabase.from("comunicados_internos").select("id, titulo, corpo, tipo, prioridade, destaque, presenca_obrigatoria, inicio_exibicao, fim_exibicao, publicado, criado_em").eq("publicado", true).order("criado_em", { ascending: false }).limit(8),
   ];
   if (irmaoId) {
@@ -205,11 +207,20 @@ function renderEvent(node, eventos, comunicados = []) {
   const days = daysUntilDate(next.when);
   const weekday = next.when.toLocaleDateString("pt-BR", { weekday: "long" });
   const time = `${String(next.when.getHours()).padStart(2, "0")}h${String(next.when.getMinutes()).padStart(2, "0")}`;
+  const tipo = sessionTypeLabel(next.tipo_evento || next.tipo);
+  const presence = next.presenca_obrigatoria ? "Presença necessária" : "Presença recomendada";
+  const program = sessionProgramItems({ ...next, categoria: "sessao", pauta: next.pauta || next.sessoes_pauta_itens });
   node.replaceChildren(
     el("p", "session-date", next.when.toLocaleDateString("pt-BR", { day: "numeric", month: "long" })),
-    el("p", "session-meta muted", `${weekday} • ${time}`),
+    el("p", "session-meta muted", `${weekday} • ${time}${tipo ? ` • ${tipo}` : ""}`),
     el("p", "session-relative", relativeDaysLabel(days)),
+    el("p", "session-meta muted", presence),
   );
+  if (program.length) {
+    const list = el("ul", "next-session-card__list");
+    program.forEach((line) => list.append(el("li", "", line)));
+    node.append(list);
+  }
   const related = relatedSessionNotices(comunicados, next);
   if (related.length) {
     node.append(sessionNoticeCue(sessionNoticeCopy(related.length)));

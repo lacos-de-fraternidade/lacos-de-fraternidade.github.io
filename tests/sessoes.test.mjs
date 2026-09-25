@@ -63,8 +63,15 @@ test("sessão excepcional editada continua sendo a próxima se estiver ativa", (
   assert.equal(next.when.getDate(), 24);
 });
 
-test("o programa da sessão ordinária descreve o café, o grau e a pauta", () => {
-  assert.deepEqual(sessionProgramItems({ categoria: "sessao", tipoEvento: "sessao_ordinaria" }), [
+test("o programa da sessão descreve café, grau e pauta persistidos", () => {
+  assert.deepEqual(sessionProgramItems({
+    categoria: "sessao",
+    tipoEvento: "sessao_ordinaria",
+    cafe_fraternal: true,
+    cafe_horario: "18:45",
+    grau: 1,
+    pauta: [{ titulo: "Leitura da pauta administrativa", ordem: 1 }],
+  }), [
     "Café fraternal às 18h45",
     "Sessão no grau 1",
     "Leitura da pauta administrativa",

@@ -174,6 +174,10 @@ test("células e painel do dia comunicam o conteúdo sem depender só de pontos"
     horario: "19h30",
     loja: "ARLS Laços de Fraternidade 357 nº 251",
     presencaObrigatoria: false,
+    cafe_fraternal: true,
+    cafe_horario: "18:45",
+    grau: 1,
+    pauta: [{ titulo: "Leitura da pauta administrativa", ordem: 1 }],
   });
   assert.equal(card.dateLabel, "26 de agosto");
   assert.equal(card.eventLabel, "Sessão Ordinária · 19h30");
